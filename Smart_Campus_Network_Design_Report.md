@@ -475,12 +475,13 @@ Access Control Lists provide granular security enforcement to protect sensitive 
 **ACL Configuration**:
 ```
 ! Extended ACL to block Guest access to sensitive networks
+! Note: For production deployments, consider using object groups for better maintainability
 ip access-list extended GUEST-RESTRICTION
- ! Block access to Admin VLAN
+ ! Block access to Admin VLAN (192.168.10.0/25)
  deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
- ! Block access to Server VLAN
+ ! Block access to Server VLAN (192.168.30.64/27)
  deny ip 192.168.99.0 0.0.0.255 192.168.30.64 0.0.0.31
- ! Block access to Security Monitoring VLAN
+ ! Block access to Security Monitoring VLAN (192.168.30.96/27)
  deny ip 192.168.99.0 0.0.0.255 192.168.30.96 0.0.0.31
  ! Allow internet access only (HTTP/HTTPS)
  permit tcp 192.168.99.0 0.0.0.255 any eq 80
@@ -632,6 +633,7 @@ line vty 0 4
 logging buffered 51200
 logging console warnings
 logging trap informational
+! Send logs to NVR/Server system in Building C (VLAN 31)
 logging host 192.168.30.65
 
 ! Log ACL matches
@@ -929,6 +931,7 @@ interface GigabitEthernet 1/2
  security-level 100
  ip address 192.168.100.1 255.255.255.252
 !
+! Route all campus networks (192.168.0.0/16) through inside interface
 route inside 192.168.0.0 255.255.0.0 192.168.100.2
 route outside 0.0.0.0 0.0.0.0 dhcp 1
 !
