@@ -234,12 +234,27 @@ write memory
 
 #### Step 3: Configure Subinterfaces (VLANs)
 
+**⚠️ CRITICAL: Router-on-a-Stick Configuration**
+
+When using subinterfaces for VLAN routing (router-on-a-stick):
+- ✅ **Physical interface**: NO IP address, only `no shutdown`
+- ✅ **Subinterfaces**: Each has its own IP address with VLAN encapsulation
+
+**Common Error**: If you assign an IP to the physical interface, you'll get:
+```
+% 192.168.10.0 overlaps with GigabitEthernet0/0/1
+```
+
+**Correct Configuration**:
+
 ```cisco
 configure terminal
 
 ! LAN Interface Configuration (Trunk Port)
+! IMPORTANT: Physical interface has NO IP address
 interface GigabitEthernet 0/0/1
  description LAN Trunk to Switch-A
+ no ip address           ← CRITICAL: No IP on physical interface!
  no shutdown
  exit
 
@@ -306,8 +321,10 @@ interface GigabitEthernet 0/0/0
  exit
 
 ! LAN Trunk Interface
+! IMPORTANT: No IP address on physical interface for router-on-a-stick
 interface GigabitEthernet 0/0/1
  description LAN Trunk to Switch-B
+ no ip address           ← No IP on physical interface!
  no shutdown
  exit
 
@@ -365,8 +382,10 @@ interface GigabitEthernet 0/0/0
  exit
 
 ! LAN Trunk Interface
+! IMPORTANT: No IP address on physical interface for router-on-a-stick
 interface GigabitEthernet 0/0/1
  description LAN Trunk to Switch-C
+ no ip address           ← No IP on physical interface!
  no shutdown
  exit
 
@@ -417,8 +436,10 @@ interface GigabitEthernet 0/0/0
  exit
 
 ! LAN Trunk Interface
+! IMPORTANT: No IP address on physical interface for router-on-a-stick
 interface GigabitEthernet 0/0/1
  description LAN Trunk to Switch-D
+ no ip address           ← No IP on physical interface!
  no shutdown
  exit
 
@@ -568,9 +589,26 @@ write memory
 
 ---
 
-### Switch-B (Academic Building) - Cisco Catalyst 3650-24PS
+### Switch-B (Academic Building) - Hierarchical Architecture
 
-Similar configuration with Building B VLANs:
+**Important**: Building B uses a **hierarchical three-tier switch architecture** to accommodate 75 student PCs + 20 teacher devices + 10 smart boards + cameras. This design provides better scalability and VLAN segregation.
+
+**Architecture**:
+```
+Router-B (Gi0/0/1)
+       |
+       | [Trunk: VLANs 20,21,22,23]
+       |
+  Switch-B (Core/Distribution) - Cisco Catalyst 3650-24PS
+       |
+   ____|____________________
+  |         |              |
+VLAN 20   VLAN 21        VLAN 22
+Switch-B1 Switch-B2      Switch-B3
+(Students)(Teachers)  (Smart Boards)
+```
+
+#### Step 1: Configure Switch-B (Core/Distribution Switch)
 
 ```cisco
 enable
@@ -601,20 +639,171 @@ interface GigabitEthernet 1/0/1
  description Trunk to Router-B
  switchport mode trunk
  switchport trunk allowed vlan 20,21,22,23
+ no shutdown
  exit
 
-! Access ports for Student Lab PCs (example - first 24 of 75)
-interface range GigabitEthernet 1/0/2-24
+! Trunk to Switch-B1 (Student Labs)
+interface GigabitEthernet 1/0/2
+ description Trunk to Switch-B1
+ switchport mode trunk
+ switchport trunk allowed vlan 20
+ no shutdown
+ exit
+
+! Trunk to Switch-B2 (Teachers)
+interface GigabitEthernet 1/0/3
+ description Trunk to Switch-B2
+ switchport mode trunk
+ switchport trunk allowed vlan 21
+ no shutdown
+ exit
+
+! Trunk to Switch-B3 (Smart Boards)
+interface GigabitEthernet 1/0/4
+ description Trunk to Switch-B3
+ switchport mode trunk
+ switchport trunk allowed vlan 22
+ no shutdown
+ exit
+
+! VLAN 23 - Academic Cameras (directly connected)
+interface range GigabitEthernet 1/0/22-24
+ description Academic Cameras
  switchport mode access
- switchport access vlan 20
- spanning-tree portfast
+ switchport access vlan 23
+ no shutdown
  exit
-
-! Note: Additional switches or ports needed for all 75 student PCs
 
 end
 write memory
 ```
+
+#### Step 2: Configure Switch-B1 (Student Labs - VLAN 20)
+
+```cisco
+enable
+configure terminal
+
+hostname Switch-B1
+
+! Basic security
+enable secret class
+service password-encryption
+
+! Create VLAN
+vlan 20
+ name Student-Labs
+ exit
+
+! Trunk to Switch-B
+interface GigabitEthernet 0/1
+ description Trunk to Switch-B Core
+ switchport mode trunk
+ switchport trunk allowed vlan 20
+ no shutdown
+ exit
+
+! Student Lab PCs (24 ports for students)
+interface range FastEthernet 0/2-24
+ description Student Lab PCs
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+#### Step 3: Configure Switch-B2 (Teachers - VLAN 21)
+
+```cisco
+enable
+configure terminal
+
+hostname Switch-B2
+
+! Basic security
+enable secret class
+service password-encryption
+
+! Create VLAN
+vlan 21
+ name Teachers
+ exit
+
+! Trunk to Switch-B
+interface GigabitEthernet 0/1
+ description Trunk to Switch-B Core
+ switchport mode trunk
+ switchport trunk allowed vlan 21
+ no shutdown
+ exit
+
+! Teacher ports (20 ports for teacher laptops/devices)
+interface range FastEthernet 0/2-21
+ description Teacher Devices
+ switchport mode access
+ switchport access vlan 21
+ spanning-tree portfast
+ no shutdown
+ exit
+
+! Academic WiFi AP (VLAN 21)
+interface FastEthernet 0/24
+ description Academic WiFi AP
+ switchport mode access
+ switchport access vlan 21
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+#### Step 4: Configure Switch-B3 (Smart Boards - VLAN 22)
+
+```cisco
+enable
+configure terminal
+
+hostname Switch-B3
+
+! Basic security
+enable secret class
+service password-encryption
+
+! Create VLAN
+vlan 22
+ name Smart-Boards
+ exit
+
+! Trunk to Switch-B
+interface GigabitEthernet 0/1
+ description Trunk to Switch-B Core
+ switchport mode trunk
+ switchport trunk allowed vlan 22
+ no shutdown
+ exit
+
+! Smart Boards (10 IoT smart boards)
+interface range FastEthernet 0/2-11
+ description Interactive Smart Boards
+ switchport mode access
+ switchport access vlan 22
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+**Benefits of Hierarchical Design**:
+- ✅ Scalability: Each access switch handles specific user groups
+- ✅ Better performance: Traffic isolated at access layer
+- ✅ Easier management: VLAN segregation per switch
+- ✅ Port capacity: 72+ access ports total (24 per switch × 3)
 
 ---
 
@@ -905,7 +1094,18 @@ show ip ospf database
 
 ## ACL Security Configuration
 
+**⚠️ Important Note - Packet Tracer Compatibility**:
+Cisco Packet Tracer does NOT support the `log` keyword in ACL statements. If you see configurations with `log` in other guides, **remove it for Packet Tracer**. All ACL configurations below are Packet Tracer compatible.
+
+**Production IOS vs Packet Tracer**:
+- ❌ Production: `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127 log` ← Has logging
+- ✅ Packet Tracer: `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127` ← No log keyword
+
+---
+
 ### Router-D: Guest Wi-Fi Isolation ACL
+
+**Purpose**: Complete isolation of guest network from ALL internal networks (CRITICAL security requirement).
 
 ```cisco
 configure terminal
@@ -970,11 +1170,11 @@ write memory
 ```cisco
 configure terminal
 
-! Standard ACL for management access
+! Standard ACL for management access (Packet Tracer compatible - no log keyword)
 access-list 1 remark MANAGEMENT ACCESS
 access-list 1 permit 192.168.10.0 0.0.0.127
 access-list 1 permit 192.168.30.96 0.0.0.31
-access-list 1 deny any log
+access-list 1 deny any
 
 ! Apply to VTY lines
 line vty 0 4
@@ -1422,6 +1622,239 @@ show route
 
 ! Verify routes to campus networks
 ```
+
+#### Issue 7: SSH Configuration and RSA Key Generation
+
+**Symptoms:** Cannot SSH to routers, or error "No RSA keys found"
+
+**Root Cause:** RSA keys not properly generated for SSH
+
+**⚠️ Important - Packet Tracer Syntax**:
+The common production IOS syntax does NOT work in Packet Tracer:
+```cisco
+crypto key generate rsa modulus 2048  ← WRONG for Packet Tracer
+```
+
+**Correct Solutions for Packet Tracer**:
+
+**Method 1: Interactive Mode (Recommended for Packet Tracer)**
+```cisco
+! Step 1: Configure domain name (REQUIRED)
+configure terminal
+ip domain-name futurevision.edu
+exit
+
+! Step 2: Generate RSA keys interactively
+crypto key generate rsa
+! When prompted "How many bits in the modulus [512]:", enter: 2048
+
+! Step 3: Enable SSH version 2
+configure terminal
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+end
+write memory
+```
+
+**Method 2: Modern IOS Syntax (May work in newer Packet Tracer versions)**
+```cisco
+configure terminal
+ip domain-name futurevision.edu
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+end
+write memory
+```
+
+**Verification Commands**:
+```cisco
+! Check if RSA keys exist
+show crypto key mypubkey rsa
+
+! Expected output: Should show public key with 2048-bit modulus
+
+! Verify SSH is enabled
+show ip ssh
+
+! Expected: SSH Enabled - version 2.0
+```
+
+**Common SSH Errors**:
+1. **"% Please define a domain-name first"**
+   - Solution: Configure `ip domain-name futurevision.edu` first
+
+2. **"% Key name not specified"**
+   - Solution: Use interactive mode instead
+
+3. **Connection timeout when trying to SSH**
+   - Check VTY ACL allows your source network
+   - Verify `transport input ssh` on VTY lines
+
+#### Issue 8: Router Physical Interface IP Overlap Error
+
+**Symptoms:** When configuring subinterfaces, error appears:
+```
+% 192.168.30.0 overlaps with GigabitEthernet0/0/1
+```
+
+**Root Cause:** Physical interface has an IP address configured, conflicting with router-on-a-stick (subinterface) configuration.
+
+**Solution:**
+```cisco
+! Remove IP address from physical interface
+configure terminal
+interface GigabitEthernet 0/0/1
+ no ip address           ← CRITICAL FIX
+ description LAN Trunk to Switch
+ no shutdown
+ exit
+end
+write memory
+```
+
+**Key Learning:**
+- ✅ Physical interface: NO IP address, only `no shutdown`
+- ✅ Subinterfaces: Each has its own IP address with VLAN encapsulation
+
+---
+
+## Section 13: User Authentication & SSH Access
+
+### Overview
+
+Enhanced security using local username/password authentication instead of simple shared passwords. This provides:
+- Individual user accountability
+- Privilege level control (read-only vs full access)
+- Better audit trail
+- SSH-only management access
+
+### Configuration Steps
+
+#### Step 1: Create Local User Database
+
+Configure on **all routers** (Router-CORE, Router-A, Router-B, Router-C, Router-D):
+
+```cisco
+configure terminal
+
+! Admin users (privilege 15 - full access)
+username admin privilege 15 secret Admin@123
+username netadmin privilege 15 secret NetAdmin@456
+
+! Building-specific users (privilege 7 - limited access)
+! Choose based on router:
+! For Router-A:
+username adminstaff privilege 7 secret Staff@2024
+
+! For Router-B:
+username teacher privilege 7 secret Teacher@2024
+
+! For Router-C:
+username librarian privilege 7 secret Library@2024
+
+! For Router-D:
+username sportsstaff privilege 7 secret Sports@2024
+
+! For Router-CORE:
+username monitor privilege 1 secret Monitor@789
+
+end
+write memory
+```
+
+#### Step 2: Configure Console and VTY Lines
+
+```cisco
+configure terminal
+
+! Console access
+line console 0
+ login local        ← Uses username/password instead of simple password
+ exec-timeout 5 0
+ logging synchronous
+ exit
+
+! VTY (SSH) access
+line vty 0 4
+ login local        ← Username/password required
+ transport input ssh ← SSH only (no Telnet)
+ exec-timeout 10 0
+ logging synchronous
+ exit
+
+end
+write memory
+```
+
+#### Step 3: Enable Additional Security Features
+
+```cisco
+configure terminal
+
+! Enable password encryption
+service password-encryption
+
+! Set enable secret (for privileged EXEC mode)
+enable secret Cisco@Class123
+
+! Login banner (legal notice)
+banner login ^
+========================================
+AUTHORIZED ACCESS ONLY
+Unauthorized access is prohibited
+All activities are monitored and logged
+========================================
+^
+
+end
+write memory
+```
+
+### Privilege Levels Explained
+
+| Privilege Level | Access | Typical Users |
+|----------------|--------|---------------|
+| 15 | Full access (configure, show, debug) | Network administrators |
+| 7 | Limited config, most show commands | Department managers |
+| 1 | User EXEC only (basic show commands) | Monitoring tools |
+
+### Testing Authentication
+
+**Test from Admin PC**:
+```cisco
+! SSH to router
+ssh admin@192.168.1.1
+! Password: Admin@123
+
+! Once logged in:
+Router> enable
+! Password: Cisco@Class123
+
+! Now in privileged EXEC mode
+Router#
+```
+
+**Test Privilege Levels**:
+```cisco
+! As privilege 15 user (admin):
+Router> enable
+Router# configure terminal  ← Should work
+
+! As privilege 1 user (monitor):
+Router> enable
+Router# configure terminal  ← Should be DENIED
+% Access denied
+```
+
+### Security Benefits
+
+- ✅ Individual accountability (each user has unique credentials)
+- ✅ No shared passwords
+- ✅ Privilege separation (not everyone needs full access)
+- ✅ SSH encryption (no plaintext credentials)
+- ✅ Telnet disabled (transport input ssh)
+- ✅ Automatic session timeout
 
 ---
 
