@@ -110,10 +110,39 @@ To organize the topology visually, use containers or notes:
 3. Place below Router-A
 4. Label: **Switch-A (Admin)**
 
-**Switch-B (Building B):**
-1. Select **3650-24PS** (or 2960-24TT if unavailable)
-2. Place below Router-B
-3. Label: **Switch-B (Academic)**
+**Switch-B (Building B) - Hierarchical Architecture:**
+
+**Important**: Building B uses a **hierarchical switch design** with 4 switches total (1 core + 3 access switches) to accommodate all devices.
+
+1. **Core Switch-B**:
+   - Select **3650-24PS** (or 2960-24TT if unavailable)
+   - Place below Router-B (center position)
+   - Label: **Switch-B (Core/Distribution)**
+
+2. **Access Switch-B1** (Student Labs):
+   - Select **2960-24TT**
+   - Place to the left below Switch-B
+   - Label: **Switch-B1 (VLAN 20 - Students)**
+
+3. **Access Switch-B2** (Teachers):
+   - Select **2960-24TT**
+   - Place in the center below Switch-B
+   - Label: **Switch-B2 (VLAN 21 - Teachers)**
+
+4. **Access Switch-B3** (Smart Boards):
+   - Select **2960-24TT**
+   - Place to the right below Switch-B
+   - Label: **Switch-B3 (VLAN 22 - Smart Boards)**
+
+**Connection Diagram**:
+```
+        Router-B
+            |
+        Switch-B (Core)
+     _______|________
+    |       |        |
+Switch-B1 B2      B3
+```
 
 **Switch-C (Building C):**
 1. Select **2960-24TT**
@@ -241,8 +270,13 @@ Use **Copper Straight-Through** cables:
 1. **Router-A → Switch-A:**
    - Router-A: **GigabitEthernet 0/0/1** → Switch-A: **GigabitEthernet 0/1**
 
-2. **Router-B → Switch-B:**
-   - Router-B: **GigabitEthernet 0/0/1** → Switch-B: **GigabitEthernet 0/1**
+2. **Router-B → Switch-B (Core):**
+   - Router-B: **GigabitEthernet 0/0/1** → Switch-B: **GigabitEthernet 1/0/1**
+
+2a. **Switch-B (Core) → Access Switches (Hierarchical Design):**
+   - Switch-B: **Gi1/0/2** → Switch-B1: **Gi0/1** (Student Labs trunk)
+   - Switch-B: **Gi1/0/3** → Switch-B2: **Gi0/1** (Teachers trunk)
+   - Switch-B: **Gi1/0/4** → Switch-B3: **Gi0/1** (Smart Boards trunk)
 
 3. **Router-C → Switch-C:**
    - Router-C: **GigabitEthernet 0/0/1** → Switch-C: **GigabitEthernet 0/1**
@@ -260,11 +294,17 @@ Use **Copper Straight-Through** cables for all LAN connections:
 - Connect 1 AP to port 0/24
 - Connect 2 Cameras to any available ports (or use VLAN trunk)
 
-**Building B:**
-- Connect Student Lab PCs to Switch-B (use multiple switches if needed for 75 PCs)
-- Connect Teacher Laptops wirelessly (connect to APs)
-- Connect Smart Boards to switch ports
-- Connect Cameras to switch ports
+**Building B (Hierarchical Architecture):**
+- **Switch-B1** (Student Labs - VLAN 20):
+  - Connect 24 Student Lab PCs to Switch-B1 ports (FastEthernet 0/2-24)
+  - Remaining student PCs can be distributed across additional ports or switches
+- **Switch-B2** (Teachers - VLAN 21):
+  - Connect 20 Teacher Laptop docking stations to Switch-B2 ports (FastEthernet 0/2-21)
+  - Connect Academic WiFi AP to port 0/24
+- **Switch-B3** (Smart Boards - VLAN 22):
+  - Connect 10 Smart Boards to Switch-B3 ports (FastEthernet 0/2-11)
+- **Switch-B Core** (Direct connections):
+  - Connect 4 Academic Cameras to Switch-B ports (Gi1/0/22-24) - VLAN 23
 
 **Building C:**
 - Connect Library PCs to Switch-C
@@ -357,7 +397,11 @@ Use this checklist to ensure all devices are added:
 - [ ] 1 Cisco ASA 5506-X Firewall
 - [ ] 1 ISP Edge Router (Cisco ISR 4331)
 - [ ] 4 Building Routers (2×4321, 1×4331, 1×4221)
-- [ ] 4 Cisco Catalyst Switches
+- [ ] **7 Cisco Catalyst Switches** (updated for hierarchical Building B design):
+  - [ ] 1 Switch-A (Building A)
+  - [ ] 4 Building B Switches (1 core + 3 access: Switch-B, B1, B2, B3)
+  - [ ] 1 Switch-C (Building C)
+  - [ ] 1 Switch-D (Building D)
 
 ### Building A Devices (Administration)
 - [ ] 20 Staff Desktop PCs
@@ -386,13 +430,13 @@ Use this checklist to ensure all devices are added:
 
 **Total Device Count:**
 - Routers: 5
-- Switches: 4
+- **Switches: 7** (updated for hierarchical Building B design)
 - Firewall: 1
 - End Devices: 135+
 - IoT Devices: 13+
 - Servers: 3
 - APs: 3
-- **Grand Total: 164+ devices**
+- **Grand Total: 167+ devices** (updated)
 
 ---
 

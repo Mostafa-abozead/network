@@ -202,23 +202,42 @@ The Future Vision Smart Campus network implements a **Hub-and-Spoke Distributed 
            └── 2 Security Cameras
 ```
 
-#### Building B - Academic Block
+#### Building B - Academic Block (Hierarchical Architecture)
+
+**Note**: Building B implements a **hierarchical three-tier switch architecture** for scalability and better port capacity management.
+
 ```
 [Router-B (Cisco ISR 4331)]
-       | GigabitEthernet 0/0
+       | GigabitEthernet 0/0/1
        |
-[Switch-B (Cisco Catalyst 3650-24PD)]
+       | [Trunk: VLANs 20,21,22,23]
        |
-    [VLANs]
+[Switch-B (Core/Distribution) - Cisco Catalyst 3650-24PS]
+       |
+   ____|____________________
+  |         |              |
+  |         |              |
+Switch-B1  Switch-B2    Switch-B3
+(VLAN 20)  (VLAN 21)    (VLAN 22)
+24 ports   24 ports     12 ports
+
+    [VLAN Distribution]
        ├── VLAN 20: Student Labs (192.168.20.0/25 - 126 hosts)
-       │   └── 75 Student PCs
+       │   └── 75 Student PCs (across Switch-B1 and additional ports)
        ├── VLAN 21: Teachers (192.168.20.128/26 - 62 hosts)
-       │   └── 20 Teacher Laptops
+       │   └── 20 Teacher Laptops (Switch-B2)
        ├── VLAN 22: Smart Boards (192.168.20.192/27 - 30 hosts)
-       │   └── 10 IoT Smart Boards
+       │   └── 10 IoT Smart Boards (Switch-B3)
        └── VLAN 23: Academic Cameras (192.168.20.224/27 - 30 hosts)
-           └── 4 Security Cameras
+           └── 4 Security Cameras (Switch-B directly)
 ```
+
+**Hierarchical Design Benefits**:
+- **Scalability**: Total 72+ access ports (24 per access switch × 3)
+- **VLAN Segregation**: Each access switch handles specific user groups
+- **Better Performance**: Traffic isolated at access layer
+- **Easier Management**: Clear separation of student, teacher, and IoT devices
+- **Port Capacity**: Sufficient for 75 student PCs + 20 teachers + 10 smart boards
 
 #### Building C - Services & Library
 ```
@@ -465,6 +484,13 @@ interface GigabitEthernet 0/0/1
 ### 6.1 ACL Security Strategy
 
 Access Control Lists provide granular security enforcement to protect sensitive network resources and ensure appropriate network segmentation. The Future Vision Smart Campus implements both standard and extended ACLs at strategic points in the network.
+
+**⚠️ Important - Packet Tracer Compatibility Note**:
+All ACL configurations in this document are compatible with Cisco Packet Tracer. Note that Packet Tracer **does not support the `log` keyword** in ACL statements. If implementing in production IOS, you can add `log` to the end of deny statements for security monitoring. For Packet Tracer implementation, the `log` keyword must be omitted.
+
+**Syntax Differences**:
+- ✅ **Packet Tracer**: `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127`
+- ❌ **Production IOS** (not for PT): `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127 log`
 
 ### 6.2 ACL Rule 1: Guest Wi-Fi Isolation
 
