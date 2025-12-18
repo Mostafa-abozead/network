@@ -22,6 +22,8 @@ network/
 ├── Smart_Campus_Network_Design_Report.md      # Complete technical documentation
 ├── Packet_Tracer_Implementation_Guide.md      # Step-by-step implementation guide
 ├── NETWORK_DIAGRAM_INSTRUCTIONS.md            # Instructions to create .pkt file
+├── TESTING_GUIDE.md                           # Comprehensive testing procedures (NEW)
+├── DOCUMENTATION_UPDATE_SUMMARY.md            # All configuration changes and enhancements (NEW)
 └── PROJECT_REQUIREMENTS_VERIFICATION.md       # Requirements verification checklist
 ```
 
@@ -46,6 +48,23 @@ Step-by-step instructions to build the network in Cisco Packet Tracer.
 ### [Network Diagram Instructions](./NETWORK_DIAGRAM_INSTRUCTIONS.md)
 Detailed guide to create the visual topology in Packet Tracer.
 
+### [Testing Guide](./TESTING_GUIDE.md) ✨ NEW
+Comprehensive testing procedures with 20+ test scenarios covering:
+- DHCP & Basic Connectivity
+- Routing & Inter-VLAN tests
+- SSH Management Access verification
+- ACL Security policy enforcement
+- Camera & IoT Access restrictions
+- Cross-Building Routing validation
+
+### [Documentation Update Summary](./DOCUMENTATION_UPDATE_SUMMARY.md) ✨ NEW
+Complete summary of all configuration changes, fixes, and enhancements made during implementation:
+- Hierarchical switch architecture for Building B
+- SSH configuration fixes for Packet Tracer
+- Router-on-a-stick IP overlap resolution
+- Packet Tracer compatible ACL configurations
+- Enhanced user authentication with privilege levels
+
 ### [Project Requirements Verification](./PROJECT_REQUIREMENTS_VERIFICATION.md)
 Comprehensive verification that all project requirements have been met with links to each requirement.
 
@@ -55,15 +74,19 @@ Comprehensive verification that all project requirements have been met with link
 - **1 Central ISP Edge Router** (Cisco ISR 4331)
 - **4 Building Routers** (Cisco ISR series)
 - **1 Cisco ASA 5506-X Firewall** for perimeter security
-- **4 Cisco Catalyst Switches** (2960/3650 series)
+- **7 Cisco Catalyst Switches** (2960/3650 series) - Updated to include hierarchical Building B design
+  - **Building B**: Hierarchical 3-tier architecture (1 core + 3 access switches) for scalability
 - **Fiber Optic Backbone** for inter-building connectivity
 
 ### Security Features
 - Perimeter firewall with stateful inspection
 - VLAN-based network segmentation (14 VLANs)
-- Granular ACL policies for traffic control
+- Granular ACL policies for traffic control (17 ACLs - Packet Tracer compatible)
 - Complete guest Wi-Fi isolation
 - IoT device security controls
+- **Enhanced Authentication**: Username/password with privilege levels (15, 7, 1)
+- **SSH-only Management**: Telnet disabled, SSH v2 with 2048-bit RSA keys
+- **Defense in Depth**: Multi-layered security (Firewall + ACLs + VLANs + Authentication)
 
 ### IP Addressing Scheme
 | Building | Purpose | VLANs | IP Range |
