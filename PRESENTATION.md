@@ -36,44 +36,55 @@
 - ✅ Implement multi-layered security architecture
 - ✅ Provide guest WiFi with complete isolation
 - ✅ Enable centralized camera monitoring and IoT management
-- ✅ Ensure 99.9% uptime with fast convergence routing
+- ✅ Ensure 99.9% uptime with multi-protocol routing (OSPF, BGP, EIGRP)
+- ✅ External connectivity via BGP through Library building (Router-C)
 
 **Implementation Platform:** Cisco Packet Tracer
 
-**Total Budget:** $284,683
+**Total Budget:** $284,683+
 
-> 📸 *[IMAGE PLACEHOLDER: Campus overview map showing 4 buildings]*
+**Routing Architecture:**
+- **OSPF**: Fast internal campus routing
+- **BGP**: External AS connectivity via Library/Services building
+- **EIGRP**: Edge segment routing
+
+> 📸 *[IMAGE PLACEHOLDER: Campus overview map showing 4 buildings with routing protocols]*
 
 ---
 
 ## Slide 2: Network Architecture
 
-### Hub-and-Spoke Distributed Routing Architecture
+### Hub-and-Spoke Distributed Routing Architecture with External Connectivity
 
 ```
-                    [Internet Cloud]
-                          |
-                    [ASA Firewall]
-                          |
-                   [Router-CORE]
-              ________|________
-             |     |     |     |
-         Router-A B    C      D
-             |     |     |     |
-         Building 1-4 (with switches)
+           [ISP_2 Router]
+          /      |      \
+   EIGRP /       | BGP   \ EIGRP
+        /        |        \
+  [Router-E1] [Router-C] [Router-E2]
+  (13.0.0.0)  (Library)  (14.0.0.0)
+                 |
+          [Router-CORE]
+       ________|________
+      |     |     |     |
+  Router-A B    (C)     D
+      |     |           |
+  Building 1-4 (with switches)
 ```
 
 **Core Components:**
-- **5 Routers**: 1 Central Hub + 4 Building Routers
-- **7 Switches**: 4 buildings (hierarchical design in Building B)
-- **1 Firewall**: Cisco ASA 5506-X for perimeter security
+- **7 Routers**: 1 Central Hub + 4 Building Routers + 1 External ISP_2 + 1 Edge Router (E1, E2)
+- **9 Switches**: 4 buildings (hierarchical design in Building B) + 2 edge switches
+- **Multi-Protocol Routing**: OSPF (internal), BGP (external via Library), EIGRP (edge segment)
 - **14 VLANs**: Segmented for different user groups
 
 **Connection Type:**
 - Inter-building: Fiber optic (1-10 Gbps capable)
 - Intra-building: Cat6a UTP (10 Gbps capable)
+- External BGP: 10.0.0.0/8 link between ISP_2 and Router-C (Library)
+- Edge EIGRP: 11.0.0.0/8 and 12.0.0.0/8 links to edge routers
 
-> 📸 *[IMAGE PLACEHOLDER: Full network topology diagram showing all routers, switches, and connections]*
+> 📸 *[IMAGE PLACEHOLDER: Full network topology diagram showing all routers, switches, and connections with protocol labels]*
 
 ---
 
@@ -135,7 +146,12 @@
 
 **Critical Services:** 24/7 NVR recording, centralized IoT management
 
-> 📸 *[IMAGE PLACEHOLDER: Building C server room with NVR and security monitoring setup]*
+**Special Feature - External Connectivity:**
+- **BGP Link to ISP_2**: Router-C (10.0.0.2) connects to external ISP_2 router (10.0.0.1)
+- **AS 65001**: Campus autonomous system
+- **Route Redistribution**: OSPF routes advertised via BGP to external networks
+
+> 📸 *[IMAGE PLACEHOLDER: Building C server room with NVR, security monitoring setup, and BGP connection diagram]*
 
 ---
 
@@ -262,9 +278,9 @@ Layer 4: Device    → SSH-only Management + Authentication
 
 ---
 
-## Slide 7: Routing Protocol - OSPF
+## Slide 7: Routing Protocols - Multi-Protocol Architecture
 
-### Why OSPF (Open Shortest Path First)?
+### OSPF for Internal Campus Routing
 
 **Selected Protocol:** OSPFv2, Process ID 1, Area 0
 
@@ -278,9 +294,9 @@ Layer 4: Device    → SSH-only Management + Authentication
 | **Standards** | Open standard (RFC 2328), vendor-neutral |
 | **Features** | VLSM support, authentication, load balancing |
 
-**Network Design:**
-- All routers in Area 0 (Backbone)
-- Router IDs: 1.1.1.1 (CORE), 10.10.10.10 (A), 20.20.20.20 (B), etc.
+**Internal Campus Design:**
+- All building routers in Area 0 (Backbone)
+- Router IDs: 1.1.1.1 (CORE), 10.10.10.10 (A), 20.20.20.20 (B), 30.30.30.30 (C), 40.40.40.40 (D)
 - Passive interfaces on LAN-facing ports
 - Active OSPF on WAN links only
 
@@ -292,7 +308,70 @@ show ip ospf neighbor
 ! Building routers: 1 neighbor (CORE)
 ```
 
-> 📸 *[IMAGE PLACEHOLDER: OSPF topology showing Area 0 and neighbor relationships]*
+### BGP for External Connectivity - Library Building
+
+**Connection:** Router-C (Services & Library) ↔ ISP_2 Router
+
+**Protocol:** BGP-4 (Border Gateway Protocol)
+
+**AS Numbers:**
+- Campus Network (Router-C): AS 65001
+- External ISP (ISP_2): AS 65000
+
+**BGP Link:**
+- Network: 10.0.0.0/8
+- Router-C IP: 10.0.0.2
+- ISP_2 IP: 10.0.0.1
+
+**Why BGP for Library Station?**
+- Industry standard for inter-AS routing
+- Policy-based routing control
+- Scalability for external connections
+- Prevents routing loops between autonomous systems
+
+**Router-C Configuration:**
+```cisco
+router bgp 65001
+ bgp router-id 10.0.0.2
+ neighbor 10.0.0.1 remote-as 65000
+ network 192.168.0.0 mask 255.255.0.0
+ redistribute ospf 1
+```
+
+**Route Redistribution:**
+- Router-C redistributes OSPF routes into BGP for external advertisement
+- BGP routes redistributed into OSPF with metric 100
+
+### EIGRP for Edge Segment
+
+**ISP_2 Router also runs EIGRP** to connect edge routers:
+
+**EIGRP Segment:**
+- **ISP_2** ↔ **Router-E1** (11.0.0.0/8 link, LAN: 13.0.0.0/8)
+- **ISP_2** ↔ **Router-E2** (12.0.0.0/8 link, LAN: 14.0.0.0/8)
+
+**AS Number:** 100
+
+**Why EIGRP for Edge?**
+- Cisco-optimized fast convergence (DUAL algorithm)
+- Low bandwidth utilization
+- Automatic summarization capabilities
+
+**ISP_2 EIGRP Configuration:**
+```cisco
+router eigrp 100
+ network 11.0.0.0 0.255.255.255
+ network 12.0.0.0 0.255.255.255
+ no auto-summary
+```
+
+**Multi-Protocol Integration:**
+- OSPF: Internal campus routing (all buildings)
+- BGP: External routing via Router-C (Library)
+- EIGRP: Edge segment routing (ISP_2 to edge routers)
+- Route redistribution on Router-C enables full connectivity
+
+> 📸 *[IMAGE PLACEHOLDER: Multi-protocol topology showing OSPF Area 0, BGP link to Library, and EIGRP edge segment]*
 
 ---
 
@@ -504,13 +583,17 @@ crypto key generate rsa
 ### Network Infrastructure Summary
 
 **Core Network Equipment:**
-- **Routers:** 5 (Cisco ISR 4331, 4321, 4221)
-- **Switches:** 7 (Cisco Catalyst 3650-24PS, 2960-24TT)
-- **Firewall:** 1 (Cisco ASA 5506-X)
+- **Routers:** 7 (Cisco ISR 4331, 4321, 4221)
+  - 5 Campus routers (CORE, A, B, C, D)
+  - 1 External ISP_2 router
+  - 1 Edge router (E1, E2)
+- **Switches:** 9 (Cisco Catalyst 3650-24PS, 2960-24TT)
+  - 7 Campus switches (hierarchical in Building B)
+  - 2 Edge switches
 - **Wireless:** 3 APs + 1 Controller
 
 **End-User Devices:**
-- **PCs/Laptops:** 135
+- **PCs/Laptops:** 135+
 - **Printers:** 2
 - **IP Cameras:** 12
 - **Smart Boards:** 10
@@ -519,15 +602,19 @@ crypto key generate rsa
 
 **Network Configuration:**
 - **VLANs:** 14
-- **ACLs:** 17 (Extended & Standard)
+- **ACLs:** 17+ (Extended & Standard)
 - **DHCP Pools:** 14
 - **User Accounts:** 35
-- **OSPF Area:** Single Area 0
+- **Routing Protocols:**
+  - **OSPF Area 0**: Internal campus routing
+  - **BGP AS 65001**: External routing via Router-C (Library)
+  - **EIGRP AS 100**: Edge segment routing
 
 **Performance Metrics:**
 - **Fiber Backbone:** 1-10 Gbps capable
 - **LAN Speed:** 10 Gbps (Cat6a)
 - **OSPF Convergence:** 1-5 seconds
+- **BGP AS Path:** Single-hop (AS 65001 ↔ AS 65000)
 - **Network Uptime Target:** 99.9%
 
 > 📸 *[IMAGE PLACEHOLDER: Technical specifications infographic with icons]*
@@ -585,11 +672,15 @@ crypto key generate rsa
 3. From Student PC, SSH to Router-CORE: `ssh admin@192.168.1.1`
 4. **Result:** ❌ Connection timeout (VTY ACL blocks student network)
 
-**Demo 4: OSPF Routing**
+**Demo 4: Multi-Protocol Routing Verification**
 1. On Router-CORE, run: `show ip ospf neighbor`
 2. **Result:** 4 neighbors in FULL state (A, B, C, D)
-3. Traceroute from Building A to Building C: `tracert 192.168.30.1`
-4. **Result:** Path shown through Router-CORE (multi-hop routing)
+3. On Router-C (Library), run: `show ip bgp summary`
+4. **Result:** BGP neighbor 10.0.0.1 (ISP_2) in Established state
+5. On ISP_2, run: `show ip eigrp neighbors`
+6. **Result:** 2 EIGRP neighbors (Router-E1 and Router-E2)
+7. Traceroute from Building A to Building C: `tracert 192.168.30.1`
+8. **Result:** Path shown through Router-CORE (multi-hop routing)
 
 **Demo 5: ACL Security**
 1. From Student PC, ping Admin gateway: `ping 192.168.10.1`
@@ -605,8 +696,8 @@ crypto key generate rsa
 
 ### Common Questions & Expert Answers
 
-**Q1: Why OSPF instead of RIP or EIGRP?**
-**A:** OSPF provides faster convergence (1-5 seconds vs RIP's 30+ seconds), no hop count limitation, and is an open standard supporting vendor interoperability. EIGRP is Cisco proprietary. For our 4-building campus with growth potential, OSPF is the optimal choice.
+**Q1: Why use multiple routing protocols (OSPF, BGP, EIGRP)?**
+**A:** Each protocol serves a specific purpose: OSPF for fast internal campus routing (1-5 seconds convergence, open standard), BGP for external AS-to-AS connectivity at Router-C (Library) with policy control, and EIGRP for the ISP_2 edge segment (Cisco-optimized, low bandwidth usage). This multi-protocol architecture provides optimal routing at each network layer.
 
 **Q2: Why hierarchical switches only in Building B?**
 **A:** Building B has 109+ devices (75 students + 20 teachers + 10 smart boards + cameras), exceeding a single 24-port switch capacity. Other buildings have fewer devices that fit within single switch port counts. This demonstrates scalable design when needed.
@@ -632,8 +723,11 @@ crypto key generate rsa
 **Q9: Can this design scale to a university campus?**
 **A:** Yes, with modifications. Add multiple Area 0 routers for redundancy, implement multi-area OSPF for larger scale, add distribution layer switches, and enhance with QoS for voice/video. Core principles remain the same.
 
-**Q10: What monitoring tools are used?**
-**A:** NVR server monitors all 12 cameras 24/7, Security Monitor Station provides live feeds, OSPF logs track routing changes, ACL counters show denied traffic, and DHCP bindings track device connections.
+**Q10: Why is BGP configured on Router-C (Library) instead of the core router?**
+**A:** Router-C in the Library/Services building serves as the external connectivity point, providing route redistribution between the internal OSPF domain and external BGP networks. This design separates external routing policy from the central hub, allowing for more flexible external connectivity management and potential future multi-homing scenarios.
+
+**Q11: What monitoring tools are used?**
+**A:** NVR server monitors all 12 cameras 24/7, Security Monitor Station provides live feeds, OSPF logs track routing changes, BGP neighbor states monitor external connectivity, ACL counters show denied traffic, and DHCP bindings track device connections.
 
 ---
 
@@ -642,17 +736,20 @@ crypto key generate rsa
 ### Future Vision Smart Campus Network
 
 **Project Highlights:**
-- ✅ 4 Buildings Connected
-- ✅ 7 Switches (Hierarchical Design)
+- ✅ 4 Buildings Connected + Edge Segment
+- ✅ 7 Campus Routers + 2 Edge Routers
+- ✅ 9 Switches (Hierarchical Design)
 - ✅ 17 Security ACLs
 - ✅ 35 User Accounts
 - ✅ 100% Test Pass Rate
-- ✅ $284,683 Budget
+- ✅ Multi-Protocol Routing (OSPF + BGP + EIGRP)
+- ✅ $284,683+ Budget
 
 **Key Achievements:**
 - Multi-layered security architecture
 - Scalable hierarchical design
-- Fast-converging OSPF routing
+- Multi-protocol routing (OSPF, BGP, EIGRP)
+- External connectivity via BGP at Library
 - Complete guest isolation
 - Individual user accountability
 - Packet Tracer verified
@@ -664,7 +761,7 @@ crypto key generate rsa
 
 **Ready for Questions!**
 
-> 📸 *[IMAGE PLACEHOLDER: Campus network success celebration image or final topology diagram]*
+> 📸 *[IMAGE PLACEHOLDER: Campus network success celebration image or final topology diagram with all protocols]*
 
 ---
 
@@ -689,16 +786,24 @@ crypto key generate rsa
 
 **Key IP Addresses:**
 - Router-CORE: 192.168.1.1 (to Building A)
-- Firewall Inside: 192.168.100.1
 - Building A Gateway: 192.168.10.1
 - Building B Gateway: 192.168.20.1
 - Building C Gateway: 192.168.30.1
 - Building D Gateway: 192.168.40.1
+- BGP Link (Router-C to ISP_2): 10.0.0.2 ↔ 10.0.0.1
+- EIGRP Link (ISP_2 to E1): 11.0.0.1 ↔ 11.0.0.2
+- EIGRP Link (ISP_2 to E2): 12.0.0.1 ↔ 12.0.0.2
+- Edge Router E1 LAN: 13.0.0.1
+- Edge Router E2 LAN: 14.0.0.1
 
 **Critical Commands:**
 ```cisco
 show ip ospf neighbor
 show ip route ospf
+show ip bgp summary
+show ip bgp neighbors
+show ip eigrp neighbors
+show ip route eigrp
 show access-lists
 show ip dhcp binding
 show crypto key mypubkey rsa
