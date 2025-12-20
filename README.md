@@ -6,33 +6,36 @@ This repository contains a comprehensive network design and implementation plan 
 
 ## 🏗️ Architecture Highlights
 
-- **Topology**: Hub-and-Spoke Distributed Routing with External Edge Connectivity
+- **Topology**: Hub-and-Spoke Distributed Routing with Library Query Station
 - **Routing Protocols**: Multi-protocol architecture (OSPF + BGP + EIGRP)
-- **Security**: NEW ACL policies focused on Library access control and inter-building restrictions
+- **Security**: NEW ACL policies focused on Library Query Station access control (VLAN30 only)
 - **IP Addressing**: VLSM-based efficient allocation (192.168.0.0/16, 10.0.0.0/8, 11-14.0.0.0/8)
-- **Buildings**: 4 interconnected campus buildings + 2 edge networks
+- **Buildings**: 4 interconnected campus buildings + Library Query Station (AS 500)
 - **Devices**: 141+ end-user devices, 12 security cameras, 10 smart boards
 
 ## 🆕 Latest Updates - Network Topology Changes
 
 ### Infrastructure Changes
 - ❌ **REMOVED**: Internet Cloud and Cisco ASA Firewall components
-- ✅ **ADDED**: ISP_2 external router with BGP connectivity
-- ✅ **ADDED**: EIGRP segment with Router-E1 and Router-E2
-- ✅ **ADDED**: Two edge switches (Switch-E1, Switch-E2) with dedicated LANs
-- ✅ **ADDED**: 6 new edge devices (2 PCs, 2 Laptops, 2 Access Points)
+- ✅ **ADDED**: Library Query Station (AS 500) with 3 routers
+- ✅ **ADDED**: BGP peering between Library Building Router (AS 600) and Query Station (AS 500)
+- ✅ **ADDED**: EIGRP AS 1 for Query Station internal routing
+- ✅ **ADDED**: Two Query Station switches (Switch-Q1, Switch-Q2) with dedicated LANs
+- ✅ **ADDED**: 6 Query Station devices (2 PCs, 2 Laptops, 2 Access Points)
 
 ### Routing Protocol Updates
 - **OSPF**: Internal campus routing (Area 0) for buildings A, B, C, D
-- **BGP**: AS 65000 (ISP_2) ↔ AS 65001 (Router-C) via 10.0.0.0/8
-- **EIGRP**: AS 100 for edge segment (11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8)
+- **BGP**: AS 600 (Library Building Router) ↔ AS 500 (Query Station) via 10.0.0.0/8
+- **EIGRP**: AS 1 for Query Station internal routing (11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8)
 
 ### Security Policy Overhaul
 **All previous ACLs removed and replaced with:**
-1. **Library Access Control**: Only Library PCs (192.168.30.0/26) permitted
-2. **Admin Building Protection**: All buildings denied access to Admin Building
-3. **Server Protection**: Student Building denied access to Services Building servers
-4. **Admin Privilege**: Admin Building has full access (no restrictions)
+1. **Library Query Station Control**: Access restricted to VLAN30 (192.168.30.0) - Library PCs ONLY
+2. **Query Station Isolation**: Denied access to all admin, academic, sports, and guest networks
+3. **Admin Building Protection**: All buildings denied access to Admin Building
+4. **Server Protection**: Student Building denied access to Services Building servers
+5. **Guest WiFi Isolation**: Complete isolation including Query Station networks
+6. **Admin Privilege**: Admin Building has full access (no restrictions)
 
 ## 📁 Repository Structure
 
@@ -56,21 +59,21 @@ New to the project? Read this first for a guided walkthrough of all documentatio
 ### [Smart Campus Network Design Report](./Smart_Campus_Network_Design_Report.md)
 Complete technical documentation including:
 1. **Case Study Overview** - Project requirements and objectives
-2. **Buildings & Users Breakdown** - Detailed inventory of 4 campus buildings + 2 edge networks
-3. **Visual Diagram Description** - Updated Cisco Packet Tracer topology design
+2. **Buildings & Users Breakdown** - Detailed inventory of 4 campus buildings + Library Query Station
+3. **Visual Diagram Description** - Updated Cisco Packet Tracer topology design with Query Station
 4. **IP Addressing Plan (VLSM)** - Complete subnet allocation tables (includes new 10.0.0.0, 11-14.0.0.0 networks)
-5. **Multi-Protocol Routing** - OSPF + BGP + EIGRP configurations and justifications
-6. **NEW Access Control Lists (ACL)** - Completely redesigned security policies
+5. **Multi-Protocol Routing** - OSPF + BGP (AS 500 ↔ AS 600) + EIGRP AS 1 configurations
+6. **NEW Access Control Lists (ACL)** - Query Station access control (VLAN30 only) and security policies
 7. **Bill of Materials** - Updated equipment list with costs ($300,150 total, +$15,467)
 
 ### [Packet Tracer Implementation Guide](./Packet_Tracer_Implementation_Guide.md)
 Step-by-step instructions to build the network in Cisco Packet Tracer:
 - Core router and building routers configuration
-- **NEW**: ISP_2, Router-E1, Router-E2 setup
-- **NEW**: BGP configuration between ISP_2 and Router-C
-- **NEW**: EIGRP configuration for edge segment
-- Switch configurations (campus + edge switches)
-- **UPDATED**: ACL security policies (all new)
+- **NEW**: Library Query Station (AS 500) with 3 routers setup
+- **NEW**: BGP configuration between Library Building Router (AS 600) and Query Station (AS 500)
+- **NEW**: EIGRP AS 1 configuration for Query Station internal routing
+- Switch configurations (campus + Query Station switches)
+- **UPDATED**: ACL security policies for Query Station (VLAN30 access only)
 - DHCP and end device configurations
 
 ### [Network Diagram Instructions](./NETWORK_DIAGRAM_INSTRUCTIONS.md)
