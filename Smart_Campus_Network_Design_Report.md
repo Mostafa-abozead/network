@@ -696,12 +696,22 @@ interface GigabitEthernet 0/0/1.30
 ```cisco
 ! Extended ACL denying access to Admin Building
 ip access-list extended DENY-ADMIN-ACCESS
- ! Deny access to Admin Staff VLAN
+ ! Deny Student Labs (VLAN 20) access to all Admin VLANs (10, 11, 12)
  deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
- ! Deny access to Admin Wi-Fi VLAN
  deny ip 192.168.20.0 0.0.0.127 192.168.10.128 0.0.0.63
- ! Deny access to Admin Cameras VLAN
  deny ip 192.168.20.0 0.0.0.127 192.168.10.192 0.0.0.31
+ ! Deny Teachers (VLAN 21) access to Admin Building
+ deny ip 192.168.20.128 0.0.0.63 192.168.10.0 0.0.0.127
+ deny ip 192.168.20.128 0.0.0.63 192.168.10.128 0.0.0.63
+ deny ip 192.168.20.128 0.0.0.63 192.168.10.192 0.0.0.31
+ ! Deny Smart Boards (VLAN 22) access to Admin Building
+ deny ip 192.168.20.192 0.0.0.31 192.168.10.0 0.0.0.127
+ deny ip 192.168.20.192 0.0.0.31 192.168.10.128 0.0.0.63
+ deny ip 192.168.20.192 0.0.0.31 192.168.10.192 0.0.0.31
+ ! Deny Academic Cameras (VLAN 23) access to Admin Building
+ deny ip 192.168.20.224 0.0.0.31 192.168.10.0 0.0.0.127
+ deny ip 192.168.20.224 0.0.0.31 192.168.10.128 0.0.0.63
+ deny ip 192.168.20.224 0.0.0.31 192.168.10.192 0.0.0.31
  ! Permit all other traffic
  permit ip any any
 !
