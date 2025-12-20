@@ -74,8 +74,8 @@ Follow this sequence for optimal implementation:
 - ✅ ISP_2 Router (Cisco ISR 4331)
 - ✅ Router-E1 (Cisco ISR 4221) - Edge router 1
 - ✅ Router-E2 (Cisco ISR 4221) - Edge router 2
-- ✅ Switch-E1 (Cisco Catalyst 2960) - For 13.0.0.0/24 network
-- ✅ Switch-E2 (Cisco Catalyst 2960) - For 14.0.0.0/24 network
+- ✅ Switch-E1 (Cisco Catalyst 2960) - For 13.0.0.0/8 network
+- ✅ Switch-E2 (Cisco Catalyst 2960) - For 14.0.0.0/8 network
 - ✅ Edge devices: 2 PCs, 2 Laptops, 2 Access Points
 
 ### Access Methods
@@ -986,21 +986,21 @@ configure terminal
 ! BGP Link to Router-C (Services & Library)
 interface GigabitEthernet 0/0/0
  description BGP Link to Router-C
- ip address 10.0.0.1 255.255.255.252
+ ip address 10.0.0.1 255.0.0.0
  no shutdown
  exit
 
 ! EIGRP Link to Router-E1
 interface GigabitEthernet 0/0/1
  description EIGRP Link to Router-E1
- ip address 11.0.0.1 255.255.255.252
+ ip address 11.0.0.1 255.0.0.0
  no shutdown
  exit
 
 ! EIGRP Link to Router-E2
 interface GigabitEthernet 0/1/0
  description EIGRP Link to Router-E2
- ip address 12.0.0.1 255.255.255.252
+ ip address 12.0.0.1 255.0.0.0
  no shutdown
  exit
 
@@ -1012,7 +1012,7 @@ write memory
 
 ### Router-E1 (Edge Router 1) - Cisco ISR 4221
 
-**Purpose**: Edge router for 13.0.0.0/24 network segment.
+**Purpose**: Edge router for 13.0.0.0/8 network segment.
 
 #### Step 1: Basic Configuration
 
@@ -1049,14 +1049,14 @@ configure terminal
 ! WAN Interface to ISP_2
 interface GigabitEthernet 0/0/0
  description EIGRP Link to ISP_2
- ip address 11.0.0.2 255.255.255.252
+ ip address 11.0.0.2 255.0.0.0
  no shutdown
  exit
 
 ! LAN Interface to Switch-E1
 interface GigabitEthernet 0/0/1
  description LAN to Switch-E1
- ip address 13.0.0.1 255.255.255.0
+ ip address 13.0.0.1 255.0.0.0
  no shutdown
  exit
 
@@ -1068,7 +1068,7 @@ write memory
 
 ### Router-E2 (Edge Router 2) - Cisco ISR 4221
 
-**Purpose**: Edge router for 14.0.0.0/24 network segment.
+**Purpose**: Edge router for 14.0.0.0/8 network segment.
 
 #### Step 1: Basic Configuration
 
@@ -1105,14 +1105,14 @@ configure terminal
 ! WAN Interface to ISP_2
 interface GigabitEthernet 0/0/0
  description EIGRP Link to ISP_2
- ip address 12.0.0.2 255.255.255.252
+ ip address 12.0.0.2 255.0.0.0
  no shutdown
  exit
 
 ! LAN Interface to Switch-E2
 interface GigabitEthernet 0/0/1
  description LAN to Switch-E2
- ip address 14.0.0.1 255.255.255.0
+ ip address 14.0.0.1 255.0.0.0
  no shutdown
  exit
 
@@ -1242,7 +1242,7 @@ configure terminal
 ! First configure the BGP interface
 interface GigabitEthernet 0/1/0
  description BGP Link to ISP_2
- ip address 10.0.0.2 255.255.255.252
+ ip address 10.0.0.2 255.0.0.0
  no shutdown
  exit
 
@@ -1321,10 +1321,10 @@ router bgp 65000
  ! Configure neighbor relationship with Router-C
  neighbor 10.0.0.2 remote-as 65001
  ! Advertise EIGRP networks via BGP
- network 11.0.0.0 mask 255.255.255.252
- network 12.0.0.0 mask 255.255.255.252
- network 13.0.0.0 mask 255.255.255.0
- network 14.0.0.0 mask 255.255.255.0
+ network 11.0.0.0 mask 255.0.0.0
+ network 12.0.0.0 mask 255.0.0.0
+ network 13.0.0.0 mask 255.0.0.0
+ network 14.0.0.0 mask 255.0.0.0
  exit
 
 end
@@ -1384,8 +1384,8 @@ configure terminal
 router eigrp 100
  eigrp router-id 10.0.0.1
  ! Advertise networks to edge routers
- network 11.0.0.0 0.0.0.3
- network 12.0.0.0 0.0.0.3
+ network 11.0.0.0 0.255.255.255
+ network 12.0.0.0 0.255.255.255
  no auto-summary
  exit
 
@@ -1401,8 +1401,8 @@ configure terminal
 router eigrp 100
  eigrp router-id 13.0.0.1
  ! Advertise networks
- network 11.0.0.0 0.0.0.3
- network 13.0.0.0 0.0.0.255
+ network 11.0.0.0 0.255.255.255
+ network 13.0.0.0 0.255.255.255
  no auto-summary
  exit
 
@@ -1418,8 +1418,8 @@ configure terminal
 router eigrp 100
  eigrp router-id 14.0.0.1
  ! Advertise networks
- network 12.0.0.0 0.0.0.3
- network 14.0.0.0 0.0.0.255
+ network 12.0.0.0 0.255.255.255
+ network 14.0.0.0 0.255.255.255
  no auto-summary
  exit
 
@@ -1803,7 +1803,7 @@ ip dhcp excluded-address 13.0.0.1 13.0.0.10
 
 ! Edge Network 1
 ip dhcp pool EDGE-NETWORK-1
- network 13.0.0.0 255.255.255.0
+ network 13.0.0.0 255.0.0.0
  default-router 13.0.0.1
  dns-server 8.8.8.8 8.8.4.4
  domain-name edge1.futurevision.edu
@@ -1822,7 +1822,7 @@ ip dhcp excluded-address 14.0.0.1 14.0.0.10
 
 ! Edge Network 2
 ip dhcp pool EDGE-NETWORK-2
- network 14.0.0.0 255.255.255.0
+ network 14.0.0.0 255.0.0.0
  default-router 14.0.0.1
  dns-server 8.8.8.8 8.8.4.4
  domain-name edge2.futurevision.edu

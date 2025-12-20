@@ -155,7 +155,7 @@ The Future Vision Smart Campus network implements a **Hub-and-Spoke Distributed 
 ```
 [ISP_2 Router]
        |
-       | BGP - 10.0.0.0/30
+       | BGP - 10.0.0.0/8
        |
 [Router-C (Services & Library)]
        |
@@ -164,13 +164,13 @@ The Future Vision Smart Campus network implements a **Hub-and-Spoke Distributed 
 ```
 
 **ISP_2 Router**: External router providing connectivity using BGP protocol:
-- BGP connection to Router-C (Services and Library) using network 10.0.0.0/30
-- EIGRP connections to two additional edge routers using networks 11.0.0.0/30 and 12.0.0.0/30
+- BGP connection to Router-C (Services and Library) using network 10.0.0.0/8
+- EIGRP connections to two additional edge routers using networks 11.0.0.0/8 and 12.0.0.0/8
 - Provides routing between campus network and external networks
 
 **EIGRP Segment**: Two additional routers connected to ISP_2 for edge connectivity:
-- Router-E1: Connected to ISP_2 via 11.0.0.0/30, LAN segment 13.0.0.0/24
-- Router-E2: Connected to ISP_2 via 12.0.0.0/30, LAN segment 14.0.0.0/24
+- Router-E1: Connected to ISP_2 via 11.0.0.0/8, LAN segment 13.0.0.0/8
+- Router-E2: Connected to ISP_2 via 12.0.0.0/8, LAN segment 14.0.0.0/8
 - Each router connects to a switch with PC, Laptop, and Access Point
 
 #### Central Hub Router
@@ -313,16 +313,16 @@ The network utilizes the private IP address space **192.168.0.0/16** with Variab
 | Network Segment | Network Address | Subnet Mask | CIDR | Usable IPs | First Host | Last Host | Broadcast | Purpose |
 |-----------------|-----------------|-------------|------|------------|------------|-----------|-----------|---------|
 | **WAN Links** |
-| ISP_2-RouterC Link | 10.0.0.0 | 255.255.255.252 | /30 | 2 | 10.0.0.1 | 10.0.0.2 | 10.0.0.3 | ISP_2 to Router-C (BGP) |
-| ISP_2-RouterE1 Link | 11.0.0.0 | 255.255.255.252 | /30 | 2 | 11.0.0.1 | 11.0.0.2 | 11.0.0.3 | ISP_2 to Router-E1 (EIGRP) |
-| ISP_2-RouterE2 Link | 12.0.0.0 | 255.255.255.252 | /30 | 2 | 12.0.0.1 | 12.0.0.2 | 12.0.0.3 | ISP_2 to Router-E2 (EIGRP) |
+| ISP_2-RouterC Link | 10.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 10.0.0.1 | 10.255.255.254 | 10.255.255.255 | ISP_2 to Router-C (BGP) |
+| ISP_2-RouterE1 Link | 11.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 11.0.0.1 | 11.255.255.254 | 11.255.255.255 | ISP_2 to Router-E1 (EIGRP) |
+| ISP_2-RouterE2 Link | 12.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 12.0.0.1 | 12.255.255.254 | 12.255.255.255 | ISP_2 to Router-E2 (EIGRP) |
 | ISP-RouterA Link | 192.168.1.0 | 255.255.255.252 | /30 | 2 | 192.168.1.1 | 192.168.1.2 | 192.168.1.3 | Core to Building A |
 | ISP-RouterB Link | 192.168.2.0 | 255.255.255.252 | /30 | 2 | 192.168.2.1 | 192.168.2.2 | 192.168.2.3 | Core to Building B |
 | ISP-RouterC Link | 192.168.3.0 | 255.255.255.252 | /30 | 2 | 192.168.3.1 | 192.168.3.2 | 192.168.3.3 | Core to Building C |
 | ISP-RouterD Link | 192.168.4.0 | 255.255.255.252 | /30 | 2 | 192.168.4.1 | 192.168.4.2 | 192.168.4.3 | Core to Building D |
 | **Edge Router LAN Segments** |
-| Router-E1 LAN | 13.0.0.0 | 255.255.255.0 | /24 | 254 | 13.0.0.1 | 13.0.0.254 | 13.0.0.255 | Edge Router 1 LAN |
-| Router-E2 LAN | 14.0.0.0 | 255.255.255.0 | /24 | 254 | 14.0.0.1 | 14.0.0.254 | 14.0.0.255 | Edge Router 2 LAN |
+| Router-E1 LAN | 13.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 13.0.0.1 | 13.255.255.254 | 13.255.255.255 | Edge Router 1 LAN |
+| Router-E2 LAN | 14.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 14.0.0.1 | 14.255.255.254 | 14.255.255.255 | Edge Router 2 LAN |
 | **Building A VLANs** |
 | VLAN 10 - Admin Staff | 192.168.10.0 | 255.255.255.128 | /25 | 126 | 192.168.10.1 | 192.168.10.126 | 192.168.10.127 | 20 PCs + 2 Printers |
 | VLAN 11 - Admin Wi-Fi | 192.168.10.128 | 255.255.255.192 | /26 | 62 | 192.168.10.129 | 192.168.10.190 | 192.168.10.191 | Staff Wireless |
@@ -404,17 +404,17 @@ The network now implements a **multi-protocol routing architecture** combining t
 **AS Numbers**: 
 - ISP_2: AS 65000
 - Campus (Router-C): AS 65001
-**Connection**: ISP_2 (10.0.0.1) to Router-C (10.0.0.2) via network 10.0.0.0/30
+**Connection**: ISP_2 (10.0.0.1) to Router-C (10.0.0.2) via network 10.0.0.0/8
 
 **BGP Configuration - ISP_2**:
 ```cisco
 router bgp 65000
  bgp router-id 10.0.0.1
  neighbor 10.0.0.2 remote-as 65001
- network 11.0.0.0 mask 255.255.255.252
- network 12.0.0.0 mask 255.255.255.252
- network 13.0.0.0 mask 255.255.255.0
- network 14.0.0.0 mask 255.255.255.0
+ network 11.0.0.0 mask 255.0.0.0
+ network 12.0.0.0 mask 255.0.0.0
+ network 13.0.0.0 mask 255.0.0.0
+ network 14.0.0.0 mask 255.0.0.0
 ```
 
 **BGP Configuration - Router-C**:
@@ -430,29 +430,29 @@ router bgp 65001
 
 **Routing Process AS**: 100
 **Scope**: ISP_2, Router-E1, Router-E2
-**Networks**: 11.0.0.0/30, 12.0.0.0/30, 13.0.0.0/24, 14.0.0.0/24
+**Networks**: 11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8
 
 **EIGRP Configuration - ISP_2**:
 ```cisco
 router eigrp 100
- network 11.0.0.0 0.0.0.3
- network 12.0.0.0 0.0.0.3
+ network 11.0.0.0 0.255.255.255
+ network 12.0.0.0 0.255.255.255
  no auto-summary
 ```
 
 **EIGRP Configuration - Router-E1**:
 ```cisco
 router eigrp 100
- network 11.0.0.0 0.0.0.3
- network 13.0.0.0 0.0.0.255
+ network 11.0.0.0 0.255.255.255
+ network 13.0.0.0 0.255.255.255
  no auto-summary
 ```
 
 **EIGRP Configuration - Router-E2**:
 ```cisco
 router eigrp 100
- network 12.0.0.0 0.0.0.3
- network 14.0.0.0 0.0.0.255
+ network 12.0.0.0 0.255.255.255
+ network 14.0.0.0 0.255.255.255
  no auto-summary
 ```
 

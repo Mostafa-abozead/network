@@ -9,7 +9,7 @@ This repository contains a comprehensive network design and implementation plan 
 - **Topology**: Hub-and-Spoke Distributed Routing with External Edge Connectivity
 - **Routing Protocols**: Multi-protocol architecture (OSPF + BGP + EIGRP)
 - **Security**: NEW ACL policies focused on Library access control and inter-building restrictions
-- **IP Addressing**: VLSM-based efficient allocation (192.168.0.0/16, 10.0.0.0/30, 11-14.0.0.0/24)
+- **IP Addressing**: VLSM-based efficient allocation (192.168.0.0/16, 10.0.0.0/8, 11-14.0.0.0/8)
 - **Buildings**: 4 interconnected campus buildings + 2 edge networks
 - **Devices**: 141+ end-user devices, 12 security cameras, 10 smart boards
 
@@ -24,8 +24,8 @@ This repository contains a comprehensive network design and implementation plan 
 
 ### Routing Protocol Updates
 - **OSPF**: Internal campus routing (Area 0) for buildings A, B, C, D
-- **BGP**: AS 65000 (ISP_2) ↔ AS 65001 (Router-C) via 10.0.0.0/30
-- **EIGRP**: AS 100 for edge segment (11.0.0.0/30, 12.0.0.0/30, 13.0.0.0/24, 14.0.0.0/24)
+- **BGP**: AS 65000 (ISP_2) ↔ AS 65001 (Router-C) via 10.0.0.0/8
+- **EIGRP**: AS 100 for edge segment (11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8)
 
 ### Security Policy Overhaul
 **All previous ACLs removed and replaced with:**
@@ -133,11 +133,11 @@ Comprehensive verification that all project requirements have been met with link
 | Building B | Academic | 192.168.20.0/24 | OSPF |
 | Building C | Services & Library | 192.168.30.0/24 | OSPF + BGP |
 | Building D | Sports & Events | 192.168.40.0/24, 192.168.99.0/24 | OSPF |
-| ISP_2 ↔ Router-C | BGP Link | 10.0.0.0/30 | BGP |
-| ISP_2 ↔ Router-E1 | EIGRP Link | 11.0.0.0/30 | EIGRP |
-| ISP_2 ↔ Router-E2 | EIGRP Link | 12.0.0.0/30 | EIGRP |
-| Edge Network 1 | Router-E1 LAN | 13.0.0.0/24 | EIGRP |
-| Edge Network 2 | Router-E2 LAN | 14.0.0.0/24 | EIGRP |
+| ISP_2 ↔ Router-C | BGP Link | 10.0.0.0/8 | BGP |
+| ISP_2 ↔ Router-E1 | EIGRP Link | 11.0.0.0/8 | EIGRP |
+| ISP_2 ↔ Router-E2 | EIGRP Link | 12.0.0.0/8 | EIGRP |
+| Edge Network 1 | Router-E1 LAN | 13.0.0.0/8 | EIGRP |
+| Edge Network 2 | Router-E2 LAN | 14.0.0.0/8 | EIGRP |
 
 ## 🛠️ Equipment Summary
 

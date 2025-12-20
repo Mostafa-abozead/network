@@ -32,34 +32,34 @@ The following ACLs were completely removed and replaced with new policies:
 
 ### 1. ISP_2 Router (Cisco ISR 4331)
 - **Purpose**: External router providing BGP and EIGRP connectivity
-- **BGP Connection**: To Router-C (Services & Library) via 10.0.0.0/30
+- **BGP Connection**: To Router-C (Services & Library) via 10.0.0.0/8
 - **EIGRP Connections**: To Router-E1 and Router-E2
 - **Cost**: +$3,500
 - **AS Number**: AS 65000 (for BGP)
 
 ### 2. Router-E1 (Edge Router 1) - Cisco ISR 4221
-- **Purpose**: Edge router for network segment 13.0.0.0/24
-- **WAN Link**: 11.0.0.0/30 to ISP_2 (EIGRP)
-- **LAN Segment**: 13.0.0.0/24
+- **Purpose**: Edge router for network segment 13.0.0.0/8
+- **WAN Link**: 11.0.0.0/8 to ISP_2 (EIGRP)
+- **LAN Segment**: 13.0.0.0/8
 - **Cost**: +$1,900
 - **Routing Protocol**: EIGRP AS 100
 
 ### 3. Router-E2 (Edge Router 2) - Cisco ISR 4221
-- **Purpose**: Edge router for network segment 14.0.0.0/24
-- **WAN Link**: 12.0.0.0/30 to ISP_2 (EIGRP)
-- **LAN Segment**: 14.0.0.0/24
+- **Purpose**: Edge router for network segment 14.0.0.0/8
+- **WAN Link**: 12.0.0.0/8 to ISP_2 (EIGRP)
+- **LAN Segment**: 14.0.0.0/8
 - **Cost**: +$1,900
 - **Routing Protocol**: EIGRP AS 100
 
 ### 4. Switch-E1 (Cisco Catalyst 2960)
 - **Purpose**: Access switch for Router-E1 LAN segment
-- **Network**: 13.0.0.0/24
+- **Network**: 13.0.0.0/8
 - **Connected Devices**: 1 PC, 1 Laptop, 1 Access Point
 - **Cost**: +$1,200
 
 ### 5. Switch-E2 (Cisco Catalyst 2960)
 - **Purpose**: Access switch for Router-E2 LAN segment
-- **Network**: 14.0.0.0/24
+- **Network**: 14.0.0.0/8
 - **Connected Devices**: 1 PC, 1 Laptop, 1 Access Point
 - **Cost**: +$1,200
 
@@ -88,7 +88,7 @@ The network now implements a **multi-protocol routing architecture** combining t
 - **AS Numbers**: 
   - ISP_2: AS 65000
   - Campus (Router-C): AS 65001
-- **Connection**: 10.0.0.0/30 network
+- **Connection**: 10.0.0.0/8 network
 - **Purpose**: Inter-AS routing, policy-based external connectivity
 - **Route Redistribution**: 
   - Router-C redistributes OSPF routes into BGP
@@ -99,10 +99,10 @@ The network now implements a **multi-protocol routing architecture** combining t
 ! On ISP_2
 router bgp 65000
  neighbor 10.0.0.2 remote-as 65001
- network 11.0.0.0 mask 255.255.255.252
- network 12.0.0.0 mask 255.255.255.252
- network 13.0.0.0 mask 255.255.255.0
- network 14.0.0.0 mask 255.255.255.0
+ network 11.0.0.0 mask 255.0.0.0
+ network 12.0.0.0 mask 255.0.0.0
+ network 13.0.0.0 mask 255.0.0.0
+ network 14.0.0.0 mask 255.0.0.0
 
 ! On Router-C
 router bgp 65001
@@ -114,7 +114,7 @@ router bgp 65001
 #### 3. EIGRP (Edge Segment Routing) - NEW
 - **AS Number**: 100
 - **Scope**: ISP_2, Router-E1, Router-E2
-- **Networks**: 11.0.0.0/30, 12.0.0.0/30, 13.0.0.0/24, 14.0.0.0/24
+- **Networks**: 11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8
 - **Purpose**: Cisco-optimized routing for edge segment
 - **Features**: Fast convergence with DUAL algorithm
 
@@ -122,20 +122,20 @@ router bgp 65001
 ```cisco
 ! On ISP_2
 router eigrp 100
- network 11.0.0.0 0.0.0.3
- network 12.0.0.0 0.0.0.3
+ network 11.0.0.0 0.255.255.255
+ network 12.0.0.0 0.255.255.255
  no auto-summary
 
 ! On Router-E1
 router eigrp 100
- network 11.0.0.0 0.0.0.3
- network 13.0.0.0 0.0.0.255
+ network 11.0.0.0 0.255.255.255
+ network 13.0.0.0 0.255.255.255
  no auto-summary
 
 ! On Router-E2
 router eigrp 100
- network 12.0.0.0 0.0.0.3
- network 14.0.0.0 0.0.0.255
+ network 12.0.0.0 0.255.255.255
+ network 14.0.0.0 0.255.255.255
  no auto-summary
 ```
 
@@ -308,10 +308,10 @@ ip access-list extended DENY-SERVER-ACCESS
 | Remove Cloud | ✅ Complete | Removed from all documentation |
 | Remove Firewall | ✅ Complete | Cisco ASA removed, cost deducted |
 | Add ISP_2 router | ✅ Complete | Cisco ISR 4331 added with BGP |
-| BGP Configuration (10.0.0.0) | ✅ Complete | BGP AS 65000 ↔ AS 65001 configured |
+| BGP Configuration (10.0.0.0) | ✅ Complete | BGP AS 65000 ↔ AS 65001 configured with /8 |
 | Add 2 routers with EIGRP | ✅ Complete | Router-E1 and Router-E2 added |
-| EIGRP networks (11.0.0.0, 12.0.0.0) | ✅ Complete | EIGRP AS 100 configured |
-| LAN segments (13.0.0.0, 14.0.0.0) | ✅ Complete | Two /24 networks added |
+| EIGRP networks (11.0.0.0, 12.0.0.0) | ✅ Complete | EIGRP AS 100 configured with /8 |
+| LAN segments (13.0.0.0, 14.0.0.0) | ✅ Complete | Two /8 networks added |
 | End devices on each switch | ✅ Complete | PC, Laptop, AP on each edge switch |
 
 ### 2. Security & Access Control Lists ✅
@@ -401,8 +401,8 @@ For implementing this design in Cisco Packet Tracer:
 - [ ] Configure DENY-SERVER-ACCESS on Router-B (VLANs 20, 21)
 
 ### Phase 7: Configure DHCP
-- [ ] Configure DHCP pools on Router-E1 (13.0.0.0/24)
-- [ ] Configure DHCP pools on Router-E2 (14.0.0.0/24)
+- [ ] Configure DHCP pools on Router-E1 (13.0.0.0/8)
+- [ ] Configure DHCP pools on Router-E2 (14.0.0.0/8)
 
 ### Phase 8: Configure End Devices
 - [ ] Configure DHCP on edge PCs and laptops
