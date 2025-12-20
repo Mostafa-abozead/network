@@ -73,7 +73,7 @@
 ```
 
 **Core Components:**
-- **7 Routers**: 1 Central Hub + 4 Building Routers + 1 External ISP_2 + 1 Edge Router (E1, E2)
+- **8 Routers**: 1 Central Hub + 4 Building Routers + 1 External ISP_2 + 2 Edge Routers (E1, E2)
 - **9 Switches**: 4 buildings (hierarchical design in Building B) + 2 edge switches
 - **Multi-Protocol Routing**: OSPF (internal), BGP (external via Library), EIGRP (edge segment)
 - **14 VLANs**: Segmented for different user groups
@@ -243,33 +243,26 @@
 **Multi-Layered Security Approach:**
 
 ```
-Layer 1: Perimeter → Cisco ASA Firewall
-Layer 2: Network   → 17 Access Control Lists (ACLs)
-Layer 3: Access    → VLAN Segmentation (14 VLANs)
-Layer 4: Device    → SSH-only Management + Authentication
+Layer 1: Network   → 17 Access Control Lists (ACLs)
+Layer 2: Access    → VLAN Segmentation (14 VLANs)
+Layer 3: Device    → SSH-only Management + Authentication
 ```
 
 **Key Security Features:**
 
-1. **Firewall Protection**
-   - Stateful packet inspection
-   - NAT/PAT for IP hiding
-   - Intrusion prevention
-   - DDoS protection
-
-2. **Access Control Lists (17 Total)**
+1. **Access Control Lists (17 Total)**
    - Guest WiFi complete isolation
    - Student restrictions from admin networks
    - Server protection
    - Management access control
 
-3. **Enhanced Authentication**
+2. **Enhanced Authentication**
    - 35 user accounts with privilege levels
    - SSH v2 with 2048-bit RSA encryption
    - Telnet disabled network-wide
    - Individual accountability
 
-4. **Network Segmentation**
+3. **Network Segmentation**
    - 14 VLANs for different user groups
    - IoT device isolation
    - Guest network complete isolation
@@ -583,10 +576,10 @@ crypto key generate rsa
 ### Network Infrastructure Summary
 
 **Core Network Equipment:**
-- **Routers:** 7 (Cisco ISR 4331, 4321, 4221)
+- **Routers:** 8 (Cisco ISR 4331, 4321, 4221)
   - 5 Campus routers (CORE, A, B, C, D)
   - 1 External ISP_2 router
-  - 1 Edge router (E1, E2)
+  - 2 Edge routers (E1, E2)
 - **Switches:** 9 (Cisco Catalyst 3650-24PS, 2960-24TT)
   - 7 Campus switches (hierarchical in Building B)
   - 2 Edge switches
@@ -633,7 +626,7 @@ crypto key generate rsa
 | **End-User Devices** | $98,850 | 35.1% |
 | **Professional Services** | $21,400 | 7.6% |
 | **Cabling & Infrastructure** | $16,350 | 5.8% |
-| **Routers & Firewall** | $13,550 | 4.8% |
+| **Routers** | $13,550 | 4.8% |
 | **Security & Surveillance** | $11,500 | 4.1% |
 | **Switches** | $9,000 | 3.2% |
 | **Wireless Infrastructure** | $7,850 | 2.8% |
