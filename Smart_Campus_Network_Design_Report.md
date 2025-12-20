@@ -821,39 +821,55 @@ interface GigabitEthernet 0/0/1.99
 
 ---
 
-### 6.5 NEW ACL Rule 4: Deny Student Building Access to Services Building Servers
+### 6.5 NEW ACL Rule 4: Library Server Protection (VLAN 31) - COMPREHENSIVE
 
-**Objective**: Deny Student Building (Building B) direct access to Services Building servers (VLAN 31) to ensure data integrity
+**Objective**: Deny ALL networks access to Library Servers (VLAN 31 - 192.168.30.64/27), except Admin Building and Library PCs (VLAN 30)
 
-**Implementation Location**: Router-B (Academic Block router)
+**Implementation Location**: Router-C (Services & Library router) - Applied to VLAN 31 interface
 
 **ACL Configuration**:
 ```cisco
-! Extended ACL denying student access to servers
-ip access-list extended DENY-SERVER-ACCESS
- ! Deny Student Lab access to Server VLAN
+! Extended ACL protecting server access
+ip access-list extended PROTECT-LIBRARY-SERVERS
+ ! Permit Admin Building (all VLANs) to access servers
+ permit ip 192.168.10.0 0.0.0.127 192.168.30.64 0.0.0.31
+ permit ip 192.168.10.128 0.0.0.63 192.168.30.64 0.0.0.31
+ permit ip 192.168.10.192 0.0.0.31 192.168.30.64 0.0.0.31
+ ! Permit Library PCs (VLAN 30) to access servers
+ permit ip 192.168.30.0 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Deny all other networks from accessing servers
+ deny ip any 192.168.30.64 0.0.0.31
+!
+! Apply ACL to Server VLAN interface (inbound)
+interface GigabitEthernet 0/0/1.31
+ ip access-group PROTECT-LIBRARY-SERVERS in
+```
+
+**Alternative Implementation on Other Routers** (deny at source):
+```cisco
+! On Router-B (Academic Block)
+ip access-list extended DENY-SERVER-ACCESS-B
  deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
- ! Deny Teacher access to Server VLAN
  deny ip 192.168.20.128 0.0.0.63 192.168.30.64 0.0.0.31
- ! Permit access to Library (public resources)
- permit ip any 192.168.30.0 0.0.0.63
- ! Permit all other traffic
+ deny ip 192.168.20.192 0.0.0.31 192.168.30.64 0.0.0.31
+ deny ip 192.168.20.224 0.0.0.31 192.168.30.64 0.0.0.31
  permit ip any any
-!
-! Apply ACL to Student VLAN interface
-interface GigabitEthernet 0/0/1.20
- ip access-group DENY-SERVER-ACCESS in
-!
-! Apply ACL to Teacher VLAN interface
-interface GigabitEthernet 0/0/1.21
- ip access-group DENY-SERVER-ACCESS in
+
+! On Router-D (Sports Block)
+ip access-list extended DENY-SERVER-ACCESS-D
+ deny ip 192.168.40.0 0.0.0.31 192.168.30.64 0.0.0.31
+ deny ip 192.168.40.32 0.0.0.31 192.168.30.64 0.0.0.31
+ deny ip 192.168.99.0 0.0.0.255 192.168.30.64 0.0.0.31
+ permit ip any any
 ```
 
 **Security Benefits**:
-- Protects critical servers (NVR, IoT Management) from student access
-- Ensures data integrity by preventing direct server access
-- Students can still access Library public resources
-- Prevents unauthorized data modification or exfiltration
+- **Protects critical servers** (NVR, IoT Management) from unauthorized access
+- **Only Admin Building and Library PCs** can access server VLAN 31
+- **Blocks all other buildings**: Academic (B), Sports (D), Query Station
+- **Blocks Guest WiFi** (VLAN 99) from server access
+- Ensures data integrity by preventing direct server access from untrusted networks
+- Prevents unauthorized data modification, exfiltration, or server compromise
 
 ---
 
@@ -939,12 +955,12 @@ ip access-list extended GUEST-WIFI-ISOLATION
 |------------------|-----------|---------|------------|
 | Admin (A) | None (Full Access) | Admin has access to all resources | No restrictions |
 | Academic (B) | DENY-ADMIN-ACCESS | Block access to Admin Building | All Building B VLANs |
-| Academic (B) | DENY-SERVER-ACCESS | Block access to Services servers | Student & Teacher VLANs |
 | Services (C) | LIBRARY-ACCESS-CONTROL | Only Library PCs can access network | VLAN 30 |
 | Services (C) | DENY-ADMIN-ACCESS | Block access to Admin Building | VLAN 30 |
+| **Services (C)** | **PROTECT-LIBRARY-SERVERS** | **Only Admin & Library PCs can access VLAN 31 servers** | **VLAN 31 interface** |
 | Sports (D) | DENY-ADMIN-ACCESS | Block access to Admin Building | VLANs 40, 99 |
-| **Query Station** | **QUERY-STATION-ACCESS** | **Access only VLAN30, deny all others** | **BGP interface to AS 500** |
-| Guest WiFi | GUEST-WIFI-ISOLATION | Complete isolation from all networks | VLAN 99 interface |
+| **Query Station** | **QUERY-STATION-ACCESS** | **Access only VLAN30, deny all others (including VLAN 31)** | **BGP interface to AS 500** |
+| Guest WiFi | GUEST-WIFI-ISOLATION | Complete isolation from all networks (including VLAN 31) | VLAN 99 interface |
 
 ### 6.8 Removed ACLs
 

@@ -33,7 +33,7 @@ This repository contains a comprehensive network design and implementation plan 
 1. **Library Query Station Control**: Access restricted to VLAN30 (192.168.30.0) - Library PCs ONLY
 2. **Query Station Isolation**: Denied access to all admin, academic, sports, and guest networks
 3. **Admin Building Protection**: All buildings denied access to Admin Building
-4. **Server Protection**: Student Building denied access to Services Building servers
+4. **Library Server Protection (VLAN 31)**: Only Admin Building and Library PCs can access servers - ALL others denied
 5. **Guest WiFi Isolation**: Complete isolation including Query Station networks
 6. **Admin Privilege**: Admin Building has full access (no restrictions)
 

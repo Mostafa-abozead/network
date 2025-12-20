@@ -207,18 +207,34 @@ ip access-list extended DENY-ADMIN-ACCESS
  permit ip any any
 ```
 
-### 3. Server Protection (Router-B)
-**Policy**: Deny Student Building access to Services Building servers (192.168.30.64/27)
+### 3. Library Server Protection (VLAN 31) - COMPREHENSIVE
+**Policy**: Deny ALL networks access to Library Servers (VLAN 31 - 192.168.30.64/27), EXCEPT Admin Building and Library PCs (VLAN 30)
 
 ```cisco
-ip access-list extended DENY-SERVER-ACCESS
- deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
- deny ip 192.168.20.128 0.0.0.63 192.168.30.64 0.0.0.31
- permit ip any 192.168.30.0 0.0.0.63
- permit ip any any
+! On Router-C (Services & Library) - Applied to VLAN 31 interface
+ip access-list extended PROTECT-LIBRARY-SERVERS
+ ! Permit Admin Building (all VLANs)
+ permit ip 192.168.10.0 0.0.0.127 192.168.30.64 0.0.0.31
+ permit ip 192.168.10.128 0.0.0.63 192.168.30.64 0.0.0.31
+ permit ip 192.168.10.192 0.0.0.31 192.168.30.64 0.0.0.31
+ ! Permit Library PCs (VLAN 30)
+ permit ip 192.168.30.0 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Deny all other networks
+ deny ip any 192.168.30.64 0.0.0.31
+!
+interface GigabitEthernet 0/0/1.31
+ ip access-group PROTECT-LIBRARY-SERVERS in
 ```
 
-**Applied to**: Router-B, VLANs 20 and 21 (Student and Teacher)
+**Applied to**: Router-C, VLAN 31 interface (inbound)
+
+**Security Result**:
+- ✅ Admin Building CAN access servers
+- ✅ Library PCs (VLAN 30) CAN access servers
+- ❌ Academic Building (all VLANs) BLOCKED from servers
+- ❌ Sports Building (all VLANs) BLOCKED from servers
+- ❌ Query Station BLOCKED from servers
+- ❌ Guest WiFi BLOCKED from servers
 
 ### 4. Guest WiFi Isolation Enhancement (NEW)
 **Policy**: Guest WiFi (VLAN99) must be isolated from ALL networks including Query Station

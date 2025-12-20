@@ -303,9 +303,9 @@ Layer 4: Routing   → Protocol-based isolation (OSPF/BGP/EIGRP)
 
 1. **Access Control Lists (ACLs)**
    - Library Query Station isolation (access only to VLAN30)
+   - **Library Server Protection (VLAN 31) - Only Admin & Library PCs allowed**
    - Guest WiFi complete isolation (including Query Station)
    - Student restrictions from admin networks
-   - Server protection
    - Management access control
 
 2. **Enhanced Authentication**
@@ -326,6 +326,12 @@ Layer 4: Routing   → Protocol-based isolation (OSPF/BGP/EIGRP)
    - ❌ **Denied:** All academic networks (VLAN20)
    - ❌ **Denied:** Sports networks (VLAN40)
    - ❌ **Denied:** Guest WiFi (VLAN99)
+   - ❌ **Denied:** Library Servers (VLAN31)
+
+5. **Library Server Protection (VLAN 31)**
+   - ✅ **Permitted:** Admin Building (full access)
+   - ✅ **Permitted:** Library PCs (VLAN30)
+   - ❌ **Denied:** All other networks (Academic, Sports, Query Station, Guest WiFi)
 
 > 📸 *[IMAGE PLACEHOLDER: Security layers diagram showing defense in depth with Query Station controls]*
 
@@ -450,19 +456,44 @@ permit tcp any any eq 443
 ```
 **Result:** ❌ Guests BLOCKED from internal networks and Query Station, ✅ Internet allowed
 
-### 3. Student Lab Restrictions
+### 3. Library Server Protection (VLAN 31) - NEW
+```cisco
+! Protect Library Servers - Only Admin and Library PCs allowed
+ip access-list extended PROTECT-LIBRARY-SERVERS
+ ! Permit Admin Building
+ permit ip 192.168.10.0 0.0.0.255 192.168.30.64 0.0.0.31
+ ! Permit Library PCs (VLAN 30)
+ permit ip 192.168.30.0 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Deny all others
+ deny ip any 192.168.30.64 0.0.0.31
+!
+! Applied to VLAN 31 interface
+interface GigabitEthernet 0/0/1.31
+ ip access-group PROTECT-LIBRARY-SERVERS in
+```
+**Result:** 
+- ✅ Admin Building CAN access servers
+- ✅ Library PCs CAN access servers
+- ❌ Students BLOCKED from servers (VLAN 31)
+- ❌ Sports/Events BLOCKED from servers
+- ❌ Query Station BLOCKED from servers
+- ❌ Guest WiFi BLOCKED from servers
+
+### 4. Student Lab Restrictions
 ```cisco
 ! Block admin networks
 deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
 ! Block Query Station
 deny ip 192.168.20.0 0.0.0.127 13.0.0.0 0.255.255.255
 deny ip 192.168.20.0 0.0.0.127 14.0.0.0 0.255.255.255
-! Allow library and servers
+! Block Library Servers (VLAN 31)
+deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
+! Allow library PCs
 permit ip 192.168.20.0 0.0.0.127 192.168.30.0 0.0.0.63
 ```
-**Result:** ❌ Students BLOCKED from admin and Query Station, ✅ Library/Servers allowed
+**Result:** ❌ Students BLOCKED from admin, Query Station, and servers, ✅ Library PCs allowed
 
-### 4. Management Access Control
+### 5. Management Access Control
 ```cisco
 access-list 1 permit 192.168.10.0 0.0.0.127
 access-list 1 deny any
