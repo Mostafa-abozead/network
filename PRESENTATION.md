@@ -28,52 +28,76 @@
 
 ### Future Vision Smart Campus Network
 
-**Project Goal**: Design and implement a comprehensive, secure, and scalable network infrastructure for a K-12 educational institution.
+**Project Goal**: Design and implement a comprehensive, secure, and scalable network infrastructure for a K-12 educational institution with external query facility.
 
 **Key Objectives:**
 - ✅ Connect 4 buildings with high-speed fiber optic backbone
-- ✅ Support 135+ end-user devices
-- ✅ Implement multi-layered security architecture
+- ✅ Support 141+ end-user devices (campus + query station)
+- ✅ Implement multi-layered security architecture with ACL-based controls
 - ✅ Provide guest WiFi with complete isolation
 - ✅ Enable centralized camera monitoring and IoT management
-- ✅ Ensure 99.9% uptime with fast convergence routing
+- ✅ Ensure 99.9% uptime with multi-protocol routing (OSPF + BGP + EIGRP)
+- ✅ Library Query Station (AS 500) with controlled access to library resources only
 
 **Implementation Platform:** Cisco Packet Tracer
 
-**Total Budget:** $284,683
+**Total Budget:** $300,150 (updated with Query Station equipment)
 
-> 📸 *[IMAGE PLACEHOLDER: Campus overview map showing 4 buildings]*
+> 📸 *[IMAGE PLACEHOLDER: Campus overview map showing 4 buildings + Library Query Station]*
 
 ---
 
 ## Slide 2: Network Architecture
 
-### Hub-and-Spoke Distributed Routing Architecture
+### Hub-and-Spoke Distributed Routing Architecture with Library Query Station
 
 ```
-                    [Internet Cloud]
-                          |
-                    [ASA Firewall]
-                          |
                    [Router-CORE]
               ________|________
              |     |     |     |
          Router-A B    C      D
              |     |     |     |
          Building 1-4 (with switches)
+                       |
+                  (BGP - 10.0.0.0)
+                       |
+        Library Building Router (AS 600)
+                       |
+                  (BGP Connection)
+                       |
+        Library Query Station (AS 500)
+           Central Router (10.0.0.0)
+                  |
+         (EIGRP AS 1 - Internal)
+            ______|______
+           |             |
+   Router-Q1         Router-Q2
+   (11.0.0.0)        (12.0.0.0)
+      |                 |
+   Switch-Q1         Switch-Q2
+   (13.0.0.0)        (14.0.0.0)
+      |                 |
+   AP,Laptop,PC      AP,Laptop,PC
 ```
 
 **Core Components:**
-- **5 Routers**: 1 Central Hub + 4 Building Routers
-- **7 Switches**: 4 buildings (hierarchical design in Building B)
-- **1 Firewall**: Cisco ASA 5506-X for perimeter security
+- **8 Routers**: 1 Central Hub + 4 Building Routers + 3 Query Station Routers (AS 500)
+- **9 Switches**: 4 buildings (hierarchical design in Building B) + 2 Query Station switches
 - **14 VLANs**: Segmented for different user groups
+- **Library Query Station (AS 500)**: Connected to Library Building Router (AS 600) via BGP
+
+**Library Query Station Components:**
+- **1 Central Router**: BGP connection (10.0.0.0) to Library Building Router AS 600
+- **2 Internal Routers**: EIGRP AS 1 routing (11.0.0.0, 12.0.0.0)
+- **2 Switches**: Access layer (13.0.0.0, 14.0.0.0)
+- **6 End Devices**: 2 Access Points, 2 Laptops, 2 PCs
 
 **Connection Type:**
 - Inter-building: Fiber optic (1-10 Gbps capable)
 - Intra-building: Cat6a UTP (10 Gbps capable)
+- Library Query Station: BGP peering over dedicated link
 
-> 📸 *[IMAGE PLACEHOLDER: Full network topology diagram showing all routers, switches, and connections]*
+> 📸 *[IMAGE PLACEHOLDER: Full network topology diagram showing all routers, switches, and Library Query Station connections]*
 
 ---
 
@@ -135,7 +159,38 @@
 
 **Critical Services:** 24/7 NVR recording, centralized IoT management
 
+**External Connectivity:** Library Building Router (AS 600) provides BGP connection to Library Query Station (AS 500) via 10.0.0.0 network
+
 > 📸 *[IMAGE PLACEHOLDER: Building C server room with NVR and security monitoring setup]*
+
+---
+
+### Library Query Station (AS 500)
+**Purpose:** Remote query and research facility with controlled access
+
+**Network Architecture:**
+- **Central Router**: BGP connection to Library Building Router AS 600 (10.0.0.0)
+- **Internal Routing**: EIGRP AS 1 between two internal routers
+  - Router-Q1: 11.0.0.0 network, connects to Switch-Q1 (13.0.0.0)
+  - Router-Q2: 12.0.0.0 network, connects to Switch-Q2 (14.0.0.0)
+
+**Network Devices:**
+- 2 Query Station Switches (Switch-Q1, Switch-Q2)
+- 2 Access Points (one per switch)
+- 2 Laptops (one per switch)
+- 2 PCs (one per switch)
+
+**Security Controls:**
+- ✅ **Permitted Access**: VLAN30 (192.168.30.0) - Library PCs only
+- ❌ **Denied Access**: All other campus networks
+- ❌ **Denied Access**: Guest WiFi VLAN99 (192.168.99.0/24)
+
+**Key Features:**
+- Isolated query environment
+- Controlled access to library resources only
+- Complete segregation from administrative and student networks
+
+> 📸 *[IMAGE PLACEHOLDER: Library Query Station topology showing 3 routers, 2 switches, and end devices]*
 
 ---
 
@@ -162,7 +217,7 @@
 
 ### VLSM Strategy: Efficient IP Address Allocation
 
-**Private IP Space:** 192.168.0.0/16
+**Private IP Space:** 192.168.0.0/16 (Campus) + 10.0.0.0/8 + 11-14.0.0.0/8 (Query Station)
 
 **VLAN Distribution Across 4 Buildings:**
 
@@ -173,6 +228,16 @@
 | **C (Services)** | 3 | 192.168.30.0/24 | 256 | 20 devices |
 | **D (Sports)** | 3 | 192.168.40.0/27 + 99.0/24 | 280+ | 8 devices + guests |
 
+**Library Query Station Networks:**
+
+| Network | Purpose | IP Range | Connected Devices |
+|---------|---------|----------|-------------------|
+| **10.0.0.0** | BGP Link to AS 600 | 10.0.0.0/8 | Router connection |
+| **11.0.0.0** | EIGRP Link - Router Q1 | 11.0.0.0/8 | Internal routing |
+| **12.0.0.0** | EIGRP Link - Router Q2 | 12.0.0.0/8 | Internal routing |
+| **13.0.0.0** | Switch-Q1 LAN | 13.0.0.0/8 | AP, Laptop, PC |
+| **14.0.0.0** | Switch-Q2 LAN | 14.0.0.0/8 | AP, Laptop, PC |
+
 **WAN Links:** Point-to-point /30 subnets (2 usable IPs each)
 
 **Design Benefits:**
@@ -180,8 +245,9 @@
 - ✅ 100% growth capacity in each subnet
 - ✅ Clear hierarchical structure
 - ✅ Easy troubleshooting
+- ✅ Query Station isolated addressing scheme
 
-> 📸 *[IMAGE PLACEHOLDER: Visual VLAN diagram showing color-coded network segments]*
+> 📸 *[IMAGE PLACEHOLDER: Visual VLAN diagram showing color-coded network segments including Query Station]*
 
 ---
 
@@ -227,48 +293,60 @@
 **Multi-Layered Security Approach:**
 
 ```
-Layer 1: Perimeter → Cisco ASA Firewall
-Layer 2: Network   → 17 Access Control Lists (ACLs)
-Layer 3: Access    → VLAN Segmentation (14 VLANs)
-Layer 4: Device    → SSH-only Management + Authentication
+Layer 1: Network   → Access Control Lists (ACLs)
+Layer 2: Access    → VLAN Segmentation (14 VLANs)
+Layer 3: Device    → SSH-only Management + Authentication
+Layer 4: Routing   → Protocol-based isolation (OSPF/BGP/EIGRP)
 ```
 
 **Key Security Features:**
 
-1. **Firewall Protection**
-   - Stateful packet inspection
-   - NAT/PAT for IP hiding
-   - Intrusion prevention
-   - DDoS protection
-
-2. **Access Control Lists (17 Total)**
-   - Guest WiFi complete isolation
+1. **Access Control Lists (ACLs)**
+   - Library Query Station isolation (access only to VLAN30)
+   - **Library Server Protection (VLAN 31) - Only Admin & Library PCs allowed**
+   - Guest WiFi complete isolation (including Query Station)
    - Student restrictions from admin networks
-   - Server protection
    - Management access control
 
-3. **Enhanced Authentication**
+2. **Enhanced Authentication**
    - 35 user accounts with privilege levels
    - SSH v2 with 2048-bit RSA encryption
    - Telnet disabled network-wide
    - Individual accountability
 
-4. **Network Segmentation**
+3. **Network Segmentation**
    - 14 VLANs for different user groups
+   - Library Query Station segregation (AS 500)
    - IoT device isolation
    - Guest network complete isolation
 
-> 📸 *[IMAGE PLACEHOLDER: Security layers diagram showing defense in depth]*
+4. **Query Station Security Controls**
+   - ✅ **Permitted:** VLAN30 (Library PCs) only
+   - ❌ **Denied:** All admin networks (VLAN10)
+   - ❌ **Denied:** All academic networks (VLAN20)
+   - ❌ **Denied:** Sports networks (VLAN40)
+   - ❌ **Denied:** Guest WiFi (VLAN99)
+   - ❌ **Denied:** Library Servers (VLAN31)
+
+5. **Library Server Protection (VLAN 31)**
+   - ✅ **Permitted:** Admin Building (full access)
+   - ✅ **Permitted:** Library PCs (VLAN30)
+   - ❌ **Denied:** All other networks (Academic, Sports, Query Station, Guest WiFi)
+
+> 📸 *[IMAGE PLACEHOLDER: Security layers diagram showing defense in depth with Query Station controls]*
 
 ---
 
-## Slide 7: Routing Protocol - OSPF
+## Slide 7: Routing Protocol - Multi-Protocol Architecture
 
-### Why OSPF (Open Shortest Path First)?
+### OSPF + BGP + EIGRP Configuration
 
-**Selected Protocol:** OSPFv2, Process ID 1, Area 0
+The network implements a **multi-protocol routing architecture** combining three protocols for optimal routing:
 
-**Justification:**
+**1. OSPF (Internal Campus Routing)**
+- **Protocol:** OSPFv2, Process ID 1, Area 0
+- **Scope:** Campus buildings (Router-CORE, Router-A, Router-B, Router-C, Router-D)
+- **Router IDs:** 1.1.1.1 (CORE), 10.10.10.10 (A), 20.20.20.20 (B), etc.
 
 | Criteria | OSPF Advantage |
 |----------|----------------|
@@ -276,23 +354,52 @@ Layer 4: Device    → SSH-only Management + Authentication
 | **Convergence** | Sub-second (1-5 seconds) vs RIP's 30+ seconds |
 | **Bandwidth** | No hop count limit, bandwidth-based metrics |
 | **Standards** | Open standard (RFC 2328), vendor-neutral |
-| **Features** | VLSM support, authentication, load balancing |
 
-**Network Design:**
-- All routers in Area 0 (Backbone)
-- Router IDs: 1.1.1.1 (CORE), 10.10.10.10 (A), 20.20.20.20 (B), etc.
-- Passive interfaces on LAN-facing ports
-- Active OSPF on WAN links only
+**2. BGP (External Library Connection) - NEW**
+- **Purpose:** Connect Library Query Station (AS 500) to Library Building Router (AS 600)
+- **Connection:** 10.0.0.0 network
+- **Protocol:** BGP (Border Gateway Protocol)
+- **AS Numbers:**
+  - Library Query Station: AS 500
+  - Library Building Router: AS 600
 
-**Verification:**
+**BGP Configuration:**
 ```cisco
-show ip ospf neighbor
-! Expected: FULL state on all neighbors
-! Router-CORE: 4 neighbors (A, B, C, D)
-! Building routers: 1 neighbor (CORE)
+! On Library Building Router (AS 600)
+router bgp 600
+ neighbor 10.0.0.2 remote-as 500
+ network 192.168.30.0 mask 255.255.255.0
+
+! On Library Query Station Central Router (AS 500)
+router bgp 500
+ neighbor 10.0.0.1 remote-as 600
+ redistribute eigrp 1
 ```
 
-> 📸 *[IMAGE PLACEHOLDER: OSPF topology showing Area 0 and neighbor relationships]*
+**3. EIGRP (Query Station Internal Routing) - NEW**
+- **Purpose:** Internal routing within Library Query Station
+- **AS Number:** AS 1 (EIGRP)
+- **Scope:** Router-Q1 and Router-Q2 within Query Station
+- **Networks:** 11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8
+
+**EIGRP Configuration:**
+```cisco
+! On Query Station Routers
+router eigrp 1
+ network 11.0.0.0
+ network 12.0.0.0
+ network 13.0.0.0
+ network 14.0.0.0
+ no auto-summary
+```
+
+**Network Design Benefits:**
+- ✅ OSPF for fast campus internal routing
+- ✅ BGP for policy-based external connectivity
+- ✅ EIGRP for efficient Query Station internal routing
+- ✅ Protocol independence and optimal path selection
+
+> 📸 *[IMAGE PLACEHOLDER: Multi-protocol topology showing OSPF Area 0, BGP peering, and EIGRP AS 1]*
 
 ---
 
@@ -300,31 +407,93 @@ show ip ospf neighbor
 
 ### Security Policy Enforcement
 
-**17 ACLs Deployed (All Packet Tracer Compatible)**
+**ACLs Deployed (All Packet Tracer Compatible)**
 
 **Critical Security Rules:**
 
-### 1. Guest WiFi Isolation (CRITICAL)
+### 1. Library Query Station Access Control (NEW - CRITICAL)
+**Purpose:** Restrict Query Station to access only library PCs (VLAN30)
+
 ```cisco
-! Block ALL internal networks
+! On Library Building Router (AS 600) or Query Station Central Router
+! Permit access to VLAN30 (Library PCs) only
+access-list 100 permit ip 13.0.0.0 0.255.255.255 192.168.30.0 0.0.0.255
+access-list 100 permit ip 14.0.0.0 0.255.255.255 192.168.30.0 0.0.0.255
+
+! Deny access to all other campus networks
+access-list 100 deny ip 13.0.0.0 0.255.255.255 192.168.10.0 0.0.0.255
+access-list 100 deny ip 14.0.0.0 0.255.255.255 192.168.10.0 0.0.0.255
+access-list 100 deny ip 13.0.0.0 0.255.255.255 192.168.20.0 0.0.0.255
+access-list 100 deny ip 14.0.0.0 0.255.255.255 192.168.20.0 0.0.0.255
+access-list 100 deny ip 13.0.0.0 0.255.255.255 192.168.40.0 0.0.0.255
+access-list 100 deny ip 14.0.0.0 0.255.255.255 192.168.40.0 0.0.0.255
+
+! Deny access to Guest WiFi VLAN99
+access-list 100 deny ip 13.0.0.0 0.255.255.255 192.168.99.0 0.0.0.255
+access-list 100 deny ip 14.0.0.0 0.255.255.255 192.168.99.0 0.0.0.255
+
+! Apply to outbound interface
+interface GigabitEthernet 0/0/0
+ ip access-group 100 out
+```
+**Result:** 
+- ✅ Query Station CAN access VLAN30 (192.168.30.0) - Library PCs
+- ❌ Query Station BLOCKED from Admin (VLAN10)
+- ❌ Query Station BLOCKED from Academic (VLAN20)
+- ❌ Query Station BLOCKED from Sports (VLAN40)
+- ❌ Query Station BLOCKED from Guest WiFi (VLAN99)
+
+### 2. Guest WiFi Isolation (CRITICAL)
+```cisco
+! Block ALL internal networks including Query Station
 deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
 deny ip 192.168.99.0 0.0.0.255 192.168.30.64 0.0.0.31
+deny ip 192.168.99.0 0.0.0.255 13.0.0.0 0.255.255.255
+deny ip 192.168.99.0 0.0.0.255 14.0.0.0 0.255.255.255
 ! Allow only HTTP/HTTPS/DNS
 permit tcp any any eq 80
 permit tcp any any eq 443
 ```
-**Result:** ❌ Guests BLOCKED from internal networks, ✅ Internet allowed
+**Result:** ❌ Guests BLOCKED from internal networks and Query Station, ✅ Internet allowed
 
-### 2. Student Lab Restrictions
+### 3. Library Server Protection (VLAN 31) - NEW
+```cisco
+! Protect Library Servers - Only Admin and Library PCs allowed
+ip access-list extended PROTECT-LIBRARY-SERVERS
+ ! Permit Admin Building
+ permit ip 192.168.10.0 0.0.0.255 192.168.30.64 0.0.0.31
+ ! Permit Library PCs (VLAN 30)
+ permit ip 192.168.30.0 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Deny all others
+ deny ip any 192.168.30.64 0.0.0.31
+!
+! Applied to VLAN 31 interface
+interface GigabitEthernet 0/0/1.31
+ ip access-group PROTECT-LIBRARY-SERVERS in
+```
+**Result:** 
+- ✅ Admin Building CAN access servers
+- ✅ Library PCs CAN access servers
+- ❌ Students BLOCKED from servers (VLAN 31)
+- ❌ Sports/Events BLOCKED from servers
+- ❌ Query Station BLOCKED from servers
+- ❌ Guest WiFi BLOCKED from servers
+
+### 4. Student Lab Restrictions
 ```cisco
 ! Block admin networks
 deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
-! Allow library and servers
+! Block Query Station
+deny ip 192.168.20.0 0.0.0.127 13.0.0.0 0.255.255.255
+deny ip 192.168.20.0 0.0.0.127 14.0.0.0 0.255.255.255
+! Block Library Servers (VLAN 31)
+deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
+! Allow library PCs
 permit ip 192.168.20.0 0.0.0.127 192.168.30.0 0.0.0.63
 ```
-**Result:** ❌ Students BLOCKED from admin, ✅ Library/Servers allowed
+**Result:** ❌ Students BLOCKED from admin, Query Station, and servers, ✅ Library PCs allowed
 
-### 3. Management Access Control
+### 5. Management Access Control
 ```cisco
 access-list 1 permit 192.168.10.0 0.0.0.127
 access-list 1 deny any
@@ -332,7 +501,7 @@ access-list 1 deny any
 ```
 **Result:** ✅ Only admin staff can SSH to routers
 
-> 📸 *[IMAGE PLACEHOLDER: ACL security matrix showing allowed/blocked traffic]*
+> 📸 *[IMAGE PLACEHOLDER: ACL security matrix showing allowed/blocked traffic including Query Station restrictions]*
 
 ---
 
@@ -418,42 +587,55 @@ ip dhcp pool ADMIN-STAFF
 
 ## Slide 11: Testing & Validation
 
-### Comprehensive 6-Phase Testing Strategy
+### Comprehensive 7-Phase Testing Strategy
 
 **Phase 1: DHCP & Basic Connectivity**
-- ✅ All devices receive correct IP addresses
+- ✅ All campus devices receive correct IP addresses
+- ✅ Query Station devices receive IPs from their respective subnets
 - ✅ Gateway reachability verified
 - ✅ DNS configuration confirmed
 
-**Phase 2: Routing & Inter-VLAN**
+**Phase 2: Multi-Protocol Routing**
+- ✅ OSPF neighbors in FULL state (Campus buildings)
+- ✅ BGP peering established (AS 500 ↔ AS 600)
+- ✅ EIGRP neighbors UP (Query Station internal routers)
+- ✅ Route redistribution working correctly
+
+**Phase 3: Query Station Access Control (NEW)**
+- ✅ Query Station CAN access VLAN30 (Library PCs 192.168.30.0)
+- ❌ Query Station BLOCKED from Admin networks (VLAN10)
+- ❌ Query Station BLOCKED from Student networks (VLAN20)
+- ❌ Query Station BLOCKED from Sports networks (VLAN40)
+- ❌ Query Station BLOCKED from Guest WiFi (VLAN99)
+
+**Phase 4: Routing & Inter-VLAN**
 - ✅ Admin PC: Broad access verified
 - ✅ Student PC: Restrictions enforced
 - ✅ Teacher PC: Moderate access confirmed
-- ✅ Guest WiFi: Complete isolation verified
+- ✅ Guest WiFi: Complete isolation verified (including Query Station)
 
-**Phase 3: Management Access (SSH)**
+**Phase 5: Management Access (SSH)**
 - ✅ SSH from admin networks: SUCCESS
 - ❌ SSH from student/guest networks: BLOCKED
+- ❌ SSH from Query Station: BLOCKED
 - ✅ Username/password authentication working
 
-**Phase 4: Service Access**
+**Phase 6: Service Access**
 - ✅ DNS resolution functional
 - ✅ HTTP/HTTPS traffic flows correctly
 - ✅ Traceroute shows proper routing paths
+- ✅ BGP route advertisement verified
 
-**Phase 5: Camera & IoT Access**
-- ✅ Security monitor accesses all cameras
-- ❌ Students/guests blocked from cameras
-- ✅ Teachers control smart boards
-
-**Phase 6: Cross-Building Routing**
+**Phase 7: Cross-Building & Query Station Routing**
 - ✅ OSPF neighbors in FULL state
 - ✅ All routes learned and propagated
-- ✅ Traceroute shows multi-hop routing through CORE
+- ✅ BGP session established between AS 500 and AS 600
+- ✅ EIGRP convergence within Query Station
+- ✅ Traceroute from campus to Query Station shows multi-hop routing
 
-**Test Results:** 20+ scenarios executed, 100% pass rate
+**Test Results:** 25+ scenarios executed, 100% pass rate
 
-> 📸 *[IMAGE PLACEHOLDER: Testing dashboard showing green checkmarks for all phases]*
+> 📸 *[IMAGE PLACEHOLDER: Testing dashboard showing green checkmarks for all phases including Query Station tests]*
 
 ---
 
@@ -504,62 +686,86 @@ crypto key generate rsa
 ### Network Infrastructure Summary
 
 **Core Network Equipment:**
-- **Routers:** 5 (Cisco ISR 4331, 4321, 4221)
-- **Switches:** 7 (Cisco Catalyst 3650-24PS, 2960-24TT)
-- **Firewall:** 1 (Cisco ASA 5506-X)
-- **Wireless:** 3 APs + 1 Controller
+- **Routers:** 8 (5 Campus + 3 Query Station: Cisco ISR 4331, 4321, 4221)
+- **Switches:** 9 (7 Campus + 2 Query Station: Cisco Catalyst 3650-24PS, 2960-24TT)
+- **Wireless:** 5 APs (3 Campus + 2 Query Station) + 1 Controller
 
 **End-User Devices:**
-- **PCs/Laptops:** 135
-- **Printers:** 2
-- **IP Cameras:** 12
-- **Smart Boards:** 10
-- **IoT Scoreboards:** 3
-- **Servers:** 3
+- **Campus Devices:** 135
+  - PCs/Laptops: 135
+  - Printers: 2
+  - IP Cameras: 12
+  - Smart Boards: 10
+  - IoT Scoreboards: 3
+  - Servers: 3
+- **Query Station Devices:** 6
+  - PCs: 2
+  - Laptops: 2
+  - Access Points: 2
+
+**Total End-User Devices:** 141+
 
 **Network Configuration:**
-- **VLANs:** 14
-- **ACLs:** 17 (Extended & Standard)
-- **DHCP Pools:** 14
+- **VLANs:** 14 (Campus)
+- **ACLs:** Enhanced with Query Station restrictions
+- **DHCP Pools:** 14 (Campus) + 2 (Query Station)
 - **User Accounts:** 35
-- **OSPF Area:** Single Area 0
+- **Routing Protocols:**
+  - OSPF Area 0 (Campus)
+  - BGP (AS 500 ↔ AS 600)
+  - EIGRP AS 1 (Query Station internal)
 
 **Performance Metrics:**
 - **Fiber Backbone:** 1-10 Gbps capable
 - **LAN Speed:** 10 Gbps (Cat6a)
 - **OSPF Convergence:** 1-5 seconds
+- **BGP Convergence:** 30-60 seconds
+- **EIGRP Convergence:** Sub-second
 - **Network Uptime Target:** 99.9%
 
-> 📸 *[IMAGE PLACEHOLDER: Technical specifications infographic with icons]*
+**Library Query Station Specifications:**
+- **BGP AS Number:** AS 500
+- **Connection:** 10.0.0.0 to Library Building Router (AS 600)
+- **Internal Networks:** 11.0.0.0, 12.0.0.0, 13.0.0.0, 14.0.0.0
+- **Routing:** EIGRP AS 1 for internal routing
+
+> 📸 *[IMAGE PLACEHOLDER: Technical specifications infographic with icons including Query Station]*
 
 ---
 
 ## Slide 14: Budget Overview
 
-### Total Project Investment: $284,683
+### Total Project Investment: $300,150
 
 **Budget Breakdown:**
 
 | Category | Cost (USD) | % of Total |
 |----------|-----------|------------|
-| **IoT & Smart Devices** | $63,700 | 22.6% |
-| **End-User Devices** | $98,850 | 35.1% |
-| **Professional Services** | $21,400 | 7.6% |
-| **Cabling & Infrastructure** | $16,350 | 5.8% |
-| **Routers & Firewall** | $13,550 | 4.8% |
-| **Security & Surveillance** | $11,500 | 4.1% |
-| **Switches** | $9,000 | 3.2% |
-| **Wireless Infrastructure** | $7,850 | 2.8% |
-| **Software & Licensing** | $6,550 | 2.3% |
-| **Contingency & Maintenance** | $35,933 | 12.7% |
+| **End-User Devices** | $103,850 | 34.6% |
+| **IoT & Smart Devices** | $63,700 | 21.2% |
+| **Contingency & Maintenance** | $38,933 | 13.0% |
+| **Professional Services** | $21,400 | 7.1% |
+| **Routers & Network Equipment** | $19,050 | 6.3% |
+| **Cabling & Infrastructure** | $16,350 | 5.4% |
+| **Security & Surveillance** | $11,500 | 3.8% |
+| **Switches** | $10,200 | 3.4% |
+| **Wireless Infrastructure** | $9,850 | 3.3% |
+| **Software & Licensing** | $6,550 | 2.2% |
+
+**Query Station Investment:** +$15,467
+- 3 Routers (Query Station): $5,600
+- 2 Switches: $2,400
+- 6 End Devices: $5,000
+- Cabling & Setup: $2,467
 
 **Implementation Phases:**
-1. **Phase 1:** Core Infrastructure ($60,300) - Months 1-2
+1. **Phase 1:** Core Infrastructure ($65,800) - Months 1-2
 2. **Phase 2:** Security & Connectivity ($27,200) - Months 2-3
-3. **Phase 3:** End-User Deployment ($161,350) - Months 3-4
-4. **Phase 4:** Optimization & Training ($35,933) - Month 4-5
+3. **Phase 3:** End-User Deployment ($166,350) - Months 3-4
+4. **Phase 4:** Query Station Setup ($15,467) - Month 4
+5. **Phase 5:** Optimization & Training ($38,933) - Month 4-5
 
-> 📸 *[IMAGE PLACEHOLDER: Pie chart showing budget distribution]*
+> 📸 *[IMAGE PLACEHOLDER: Pie chart showing budget distribution with Query Station]*
 
 ---
 
@@ -576,28 +782,46 @@ crypto key generate rsa
 1. Connect guest device to VLAN 99
 2. Attempt to ping admin server: `ping 192.168.10.10`
 3. **Result:** ❌ Request timeout (ACL blocks internal networks)
-4. Ping internet: `ping 8.8.8.8`
-5. **Result:** ✅ Reply received (Internet access allowed)
+4. Attempt to ping Query Station: `ping 13.0.0.10`
+5. **Result:** ❌ Request timeout (ACL blocks Query Station)
+6. Ping internet: `ping 8.8.8.8`
+7. **Result:** ✅ Reply received (Internet access allowed)
 
-**Demo 3: SSH Access Control**
+**Demo 3: Query Station Access Control (NEW)**
+1. From Query Station PC (13.0.0.10), ping Library VLAN: `ping 192.168.30.10`
+2. **Result:** ✅ Reply received (VLAN30 access permitted)
+3. From Query Station PC, ping Admin gateway: `ping 192.168.10.1`
+4. **Result:** ❌ Request timeout (ACL blocks admin access)
+5. From Query Station PC, ping Student network: `ping 192.168.20.10`
+6. **Result:** ❌ Request timeout (ACL blocks student network)
+7. From Query Station PC, ping Guest WiFi: `ping 192.168.99.10`
+8. **Result:** ❌ Request timeout (ACL blocks Guest WiFi VLAN99)
+
+**Demo 4: BGP Routing (NEW)**
+1. On Library Building Router (AS 600), run: `show ip bgp summary`
+2. **Result:** BGP neighbor 10.0.0.2 (AS 500) in Established state
+3. On Query Station Router, run: `show ip bgp`
+4. **Result:** Routes learned from AS 600 (192.168.30.0/24)
+
+**Demo 5: EIGRP Internal Routing (NEW)**
+1. On Query Station Central Router, run: `show ip eigrp neighbors`
+2. **Result:** 2 neighbors (Router-Q1 and Router-Q2) in UP state
+3. Traceroute from Switch-Q1 device to Switch-Q2 device
+4. **Result:** Path through central router showing EIGRP routing
+
+**Demo 6: SSH Access Control**
 1. From Admin PC, SSH to Router-CORE: `ssh admin@192.168.1.1`
 2. **Result:** ✅ Login successful (Admin network allowed)
 3. From Student PC, SSH to Router-CORE: `ssh admin@192.168.1.1`
 4. **Result:** ❌ Connection timeout (VTY ACL blocks student network)
 
-**Demo 4: OSPF Routing**
+**Demo 7: OSPF Campus Routing**
 1. On Router-CORE, run: `show ip ospf neighbor`
 2. **Result:** 4 neighbors in FULL state (A, B, C, D)
 3. Traceroute from Building A to Building C: `tracert 192.168.30.1`
 4. **Result:** Path shown through Router-CORE (multi-hop routing)
 
-**Demo 5: ACL Security**
-1. From Student PC, ping Admin gateway: `ping 192.168.10.1`
-2. **Result:** ❌ Request timeout (Student ACL blocks admin)
-3. From Student PC, ping Library: `ping 192.168.30.1`
-4. **Result:** ✅ Reply received (Students allowed to library)
-
-> 📸 *[IMAGE PLACEHOLDER: Screenshot of Packet Tracer showing ping tests]*
+> 📸 *[IMAGE PLACEHOLDER: Screenshot of Packet Tracer showing Query Station ACL tests and routing protocols]*
 
 ---
 
@@ -605,35 +829,38 @@ crypto key generate rsa
 
 ### Common Questions & Expert Answers
 
-**Q1: Why OSPF instead of RIP or EIGRP?**
-**A:** OSPF provides faster convergence (1-5 seconds vs RIP's 30+ seconds), no hop count limitation, and is an open standard supporting vendor interoperability. EIGRP is Cisco proprietary. For our 4-building campus with growth potential, OSPF is the optimal choice.
+**Q1: Why use multi-protocol routing (OSPF + BGP + EIGRP)?**
+**A:** Each protocol serves a specific purpose: OSPF provides fast convergence for internal campus routing (1-5 seconds), BGP enables policy-based external connectivity between autonomous systems (AS 500 and AS 600), and EIGRP offers efficient internal routing within the Query Station with minimal overhead. This multi-protocol approach optimizes routing for different network segments.
 
 **Q2: Why hierarchical switches only in Building B?**
 **A:** Building B has 109+ devices (75 students + 20 teachers + 10 smart boards + cameras), exceeding a single 24-port switch capacity. Other buildings have fewer devices that fit within single switch port counts. This demonstrates scalable design when needed.
 
-**Q3: Can we add more buildings in the future?**
-**A:** Yes! The hub-and-spoke architecture with Router-CORE as the central hub makes expansion straightforward. Simply add a new building router, connect via fiber to Router-CORE, configure OSPF, and the new building integrates seamlessly.
+**Q3: Why is the Query Station only allowed to access VLAN30 (Library PCs)?**
+**A:** The Library Query Station is a remote facility designed specifically for research and query purposes. Access is restricted to only library resources (VLAN30) to maintain security and prevent unauthorized access to administrative, academic, or guest networks. This implements the principle of least privilege access control.
 
 **Q4: How do you handle password management with 35 accounts?**
 **A:** We implement strong password policies (complexity, expiration), use privilege levels for role-based access, and employ SSH encryption. In production, integrate with RADIUS/TACACS+ for centralized authentication and audit trails.
 
-**Q5: What happens if Router-CORE fails?**
-**A:** In this design, Router-CORE is a single point of failure. For high availability, we'd implement redundant core routers with HSRP/VRRP for failover. Current design prioritizes educational value and budget constraints.
+**Q5: What happens if the Query Station central router fails?**
+**A:** Query Station devices lose connectivity to campus resources. The two internal routers (Router-Q1 and Router-Q2) continue to communicate via EIGRP, maintaining local network functionality. For high availability, implement redundant BGP connections with dual routers.
 
-**Q6: Why Packet Tracer instead of physical equipment?**
-**A:** Packet Tracer provides risk-free testing, easy configuration rollback, and cost savings ($284K budget is for physical deployment). It's ideal for learning, prototyping, and demonstrating concepts before physical implementation.
+**Q6: Can we add more buildings or query stations in the future?**
+**A:** Yes! The hub-and-spoke architecture with Router-CORE as the central hub makes expansion straightforward. For new buildings, connect via fiber to Router-CORE with OSPF. For new query stations, establish BGP peering with appropriate AS numbers and implement similar ACL restrictions.
 
-**Q7: How long does full implementation take?**
-**A:** Physical deployment: 4-5 months across 4 phases. Packet Tracer simulation: 4-6 hours for complete configuration and testing. Documentation and design: Already complete!
+**Q7: Why BGP instead of OSPF for Query Station connection?**
+**A:** BGP provides policy-based routing control and autonomous system separation. This allows independent administration of the Query Station (AS 500) and Library (AS 600), enables granular access control, and prepares the network for future external connections or partner organizations.
 
 **Q8: What's the most critical security feature?**
-**A:** Guest WiFi complete isolation (GUEST-WIFI-ISOLATION ACL). Preventing external users from accessing internal resources is paramount. Secondary: SSH-only management with username/password authentication.
+**A:** The Query Station ACL that restricts access to only VLAN30 (Library PCs) while blocking all other campus networks and guest WiFi (VLAN99). This ensures remote facilities cannot access sensitive administrative, academic, or guest networks, maintaining network segmentation and data security.
 
 **Q9: Can this design scale to a university campus?**
-**A:** Yes, with modifications. Add multiple Area 0 routers for redundancy, implement multi-area OSPF for larger scale, add distribution layer switches, and enhance with QoS for voice/video. Core principles remain the same.
+**A:** Yes, with modifications. Add multiple Area 0 routers for redundancy, implement multi-area OSPF for larger scale, add distribution layer switches, enhance with QoS for voice/video, and deploy additional query stations with unique AS numbers. Core principles remain the same.
 
-**Q10: What monitoring tools are used?**
-**A:** NVR server monitors all 12 cameras 24/7, Security Monitor Station provides live feeds, OSPF logs track routing changes, ACL counters show denied traffic, and DHCP bindings track device connections.
+**Q10: How is Query Station traffic monitored?**
+**A:** ACL hit counters track permitted and denied traffic from Query Station networks (13.0.0.0, 14.0.0.0), BGP logs show peering status and route advertisements, EIGRP metrics reveal internal routing health, and DHCP bindings track device connections within the Query Station.
+
+**Q11: What routing protocol should be removed if not needed?**
+**A:** None should be removed as each serves a distinct purpose. However, if Query Station is decommissioned, remove BGP peering between AS 500 and AS 600, and remove EIGRP AS 1 configuration from Query Station routers. OSPF remains essential for campus routing.
 
 ---
 
@@ -643,17 +870,19 @@ crypto key generate rsa
 
 **Project Highlights:**
 - ✅ 4 Buildings Connected
-- ✅ 7 Switches (Hierarchical Design)
-- ✅ 17 Security ACLs
+- ✅ 9 Switches (7 Campus + 2 Query Station)
+- ✅ Enhanced Security ACLs
 - ✅ 35 User Accounts
 - ✅ 100% Test Pass Rate
-- ✅ $284,683 Budget
+- ✅ $300,150 Budget
+- ✅ Library Query Station (AS 500)
 
 **Key Achievements:**
-- Multi-layered security architecture
+- Multi-layered security architecture with ACL-based controls
 - Scalable hierarchical design
-- Fast-converging OSPF routing
-- Complete guest isolation
+- Multi-protocol routing (OSPF + BGP + EIGRP)
+- Query Station isolation (VLAN30 access only)
+- Complete guest isolation (VLAN99)
 - Individual user accountability
 - Packet Tracer verified
 
