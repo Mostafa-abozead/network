@@ -30,42 +30,43 @@ The following ACLs were completely removed and replaced with new policies:
 
 ## ✅ Components Added
 
-### 1. ISP_2 Router (Cisco ISR 4331)
-- **Purpose**: External router providing BGP and EIGRP connectivity
-- **BGP Connection**: To Router-C (Services & Library) via 10.0.0.0/8
-- **EIGRP Connections**: To Router-E1 and Router-E2
+### 1. Library Query Station Central Router (AS 500) - Cisco ISR 4331
+- **Purpose**: Central router for Library Query Station providing BGP peering
+- **BGP Connection**: To Library Building Router AS 600 (Router-C) via 10.0.0.0/8
+- **EIGRP Connections**: To Router-Q1 and Router-Q2 (internal Query Station)
 - **Cost**: +$3,500
-- **AS Number**: AS 65000 (for BGP)
+- **AS Number**: AS 500 (for BGP)
+- **Security**: Restricted to access only VLAN30 (Library PCs)
 
-### 2. Router-E1 (Edge Router 1) - Cisco ISR 4221
-- **Purpose**: Edge router for network segment 13.0.0.0/8
-- **WAN Link**: 11.0.0.0/8 to ISP_2 (EIGRP)
+### 2. Router-Q1 (Query Station Router 1) - Cisco ISR 4221
+- **Purpose**: Internal Query Station router for network segment 13.0.0.0/8
+- **WAN Link**: 11.0.0.0/8 to Query Station Central Router (EIGRP AS 1)
 - **LAN Segment**: 13.0.0.0/8
 - **Cost**: +$1,900
-- **Routing Protocol**: EIGRP AS 100
+- **Routing Protocol**: EIGRP AS 1
 
-### 3. Router-E2 (Edge Router 2) - Cisco ISR 4221
-- **Purpose**: Edge router for network segment 14.0.0.0/8
-- **WAN Link**: 12.0.0.0/8 to ISP_2 (EIGRP)
+### 3. Router-Q2 (Query Station Router 2) - Cisco ISR 4221
+- **Purpose**: Internal Query Station router for network segment 14.0.0.0/8
+- **WAN Link**: 12.0.0.0/8 to Query Station Central Router (EIGRP AS 1)
 - **LAN Segment**: 14.0.0.0/8
 - **Cost**: +$1,900
-- **Routing Protocol**: EIGRP AS 100
+- **Routing Protocol**: EIGRP AS 1
 
-### 4. Switch-E1 (Cisco Catalyst 2960)
-- **Purpose**: Access switch for Router-E1 LAN segment
+### 4. Switch-Q1 (Cisco Catalyst 2960)
+- **Purpose**: Access switch for Router-Q1 LAN segment
 - **Network**: 13.0.0.0/8
 - **Connected Devices**: 1 PC, 1 Laptop, 1 Access Point
 - **Cost**: +$1,200
 
-### 5. Switch-E2 (Cisco Catalyst 2960)
-- **Purpose**: Access switch for Router-E2 LAN segment
+### 5. Switch-Q2 (Cisco Catalyst 2960)
+- **Purpose**: Access switch for Router-Q2 LAN segment
 - **Network**: 14.0.0.0/8
 - **Connected Devices**: 1 PC, 1 Laptop, 1 Access Point
 - **Cost**: +$1,200
 
-### 6. Edge End Devices
-- **Edge Network 1**: 1 PC, 1 Laptop, 1 Access Point
-- **Edge Network 2**: 1 PC, 1 Laptop, 1 Access Point
+### 6. Query Station End Devices
+- **Query Network 1 (Switch-Q1)**: 1 PC, 1 Laptop, 1 Access Point
+- **Query Network 2 (Switch-Q2)**: 1 PC, 1 Laptop, 1 Access Point
 - **Total New Devices**: 6
 - **Cost**: +$5,000 (total for all devices and additional wireless infrastructure)
 
@@ -86,54 +87,52 @@ The network now implements a **multi-protocol routing architecture** combining t
 
 #### 2. BGP (External Routing) - NEW
 - **AS Numbers**: 
-  - ISP_2: AS 65000
-  - Campus (Router-C): AS 65001
+  - Library Building Router (Router-C): AS 600
+  - Library Query Station: AS 500
 - **Connection**: 10.0.0.0/8 network
-- **Purpose**: Inter-AS routing, policy-based external connectivity
+- **Purpose**: Inter-AS routing, policy-based Query Station connectivity
 - **Route Redistribution**: 
-  - Router-C redistributes OSPF routes into BGP
+  - Router-C (AS 600) redistributes OSPF routes into BGP (limited to VLAN30)
   - Router-C redistributes BGP routes into OSPF
+  - Query Station redistributes EIGRP AS 1 into BGP
 
 **BGP Configuration Highlights**:
 ```cisco
-! On ISP_2
-router bgp 65000
- neighbor 10.0.0.2 remote-as 65001
- network 11.0.0.0 mask 255.0.0.0
- network 12.0.0.0 mask 255.0.0.0
- network 13.0.0.0 mask 255.0.0.0
- network 14.0.0.0 mask 255.0.0.0
+! On Library Building Router (AS 600 - Router-C)
+router bgp 600
+ neighbor 10.0.0.2 remote-as 500
+ network 192.168.30.0 mask 255.255.255.0
+ ! Only advertise Library VLAN30 to Query Station
 
-! On Router-C
-router bgp 65001
- neighbor 10.0.0.1 remote-as 65000
- network 192.168.0.0 mask 255.255.0.0
- redistribute ospf 1
+! On Query Station Central Router (AS 500)
+router bgp 500
+ neighbor 10.0.0.1 remote-as 600
+ redistribute eigrp 1
 ```
 
-#### 3. EIGRP (Edge Segment Routing) - NEW
-- **AS Number**: 100
-- **Scope**: ISP_2, Router-E1, Router-E2
+#### 3. EIGRP (Query Station Internal Routing) - NEW
+- **AS Number**: 1 (not AS 100)
+- **Scope**: Query Station Central Router, Router-Q1, Router-Q2
 - **Networks**: 11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8
-- **Purpose**: Cisco-optimized routing for edge segment
+- **Purpose**: Cisco-optimized routing for Query Station internal network
 - **Features**: Fast convergence with DUAL algorithm
 
 **EIGRP Configuration Highlights**:
 ```cisco
-! On ISP_2
-router eigrp 100
+! On Query Station Central Router
+router eigrp 1
  network 11.0.0.0 0.255.255.255
  network 12.0.0.0 0.255.255.255
  no auto-summary
 
-! On Router-E1
-router eigrp 100
+! On Router-Q1
+router eigrp 1
  network 11.0.0.0 0.255.255.255
  network 13.0.0.0 0.255.255.255
  no auto-summary
 
-! On Router-E2
-router eigrp 100
+! On Router-Q2
+router eigrp 1
  network 12.0.0.0 0.255.255.255
  network 14.0.0.0 0.255.255.255
  no auto-summary
@@ -145,7 +144,41 @@ router eigrp 100
 
 All previous ACLs were removed and replaced with a completely new security architecture:
 
-### 1. Library Access Control (Router-C)
+### 1. Library Query Station Access Control (CRITICAL - NEW)
+**Policy**: Query Station (13.0.0.0, 14.0.0.0) can ONLY access VLAN30 (Library PCs 192.168.30.0), deny all other networks
+
+```cisco
+ip access-list extended QUERY-STATION-ACCESS
+ ! Permit Query Station to access VLAN30 (Library PCs) ONLY
+ permit ip 13.0.0.0 0.255.255.255 192.168.30.0 0.0.0.255
+ permit ip 14.0.0.0 0.255.255.255 192.168.30.0 0.0.0.255
+ ! Deny access to Admin Building
+ deny ip 13.0.0.0 0.255.255.255 192.168.10.0 0.0.0.255
+ deny ip 14.0.0.0 0.255.255.255 192.168.10.0 0.0.0.255
+ ! Deny access to Academic Building
+ deny ip 13.0.0.0 0.255.255.255 192.168.20.0 0.0.0.255
+ deny ip 14.0.0.0 0.255.255.255 192.168.20.0 0.0.0.255
+ ! Deny access to Sports Building
+ deny ip 13.0.0.0 0.255.255.255 192.168.40.0 0.0.0.255
+ deny ip 14.0.0.0 0.255.255.255 192.168.40.0 0.0.0.255
+ ! Deny access to Guest WiFi (VLAN99) - CRITICAL
+ deny ip 13.0.0.0 0.255.255.255 192.168.99.0 0.0.0.255
+ deny ip 14.0.0.0 0.255.255.255 192.168.99.0 0.0.0.255
+ ! Deny all other traffic
+ deny ip 13.0.0.0 0.255.255.255 any
+ deny ip 14.0.0.0 0.255.255.255 any
+```
+
+**Applied to**: Library Building Router (Router-C), BGP interface towards Query Station (outbound)
+
+**Security Benefits**:
+- ✅ Query Station CAN access VLAN30 (Library PCs)
+- ❌ Query Station BLOCKED from Admin networks (VLAN10, 11, 12)
+- ❌ Query Station BLOCKED from Academic networks (VLAN20, 21, 22, 23)
+- ❌ Query Station BLOCKED from Sports networks (VLAN40, 41)
+- ❌ Query Station BLOCKED from Guest WiFi (VLAN99)
+
+### 2. Library Access Control (Router-C)
 **Policy**: Only Library PCs (192.168.30.0/26) can access the network
 
 ```cisco
@@ -158,7 +191,7 @@ ip access-list extended LIBRARY-ACCESS-CONTROL
 
 **Applied to**: Router-C, VLAN 30 interface (inbound)
 
-### 2. Admin Building Protection
+### 3. Admin Building Protection
 **Policy**: Deny ALL buildings access to Admin Building (Building A)
 
 **Applied on**:
@@ -187,7 +220,28 @@ ip access-list extended DENY-SERVER-ACCESS
 
 **Applied to**: Router-B, VLANs 20 and 21 (Student and Teacher)
 
-### 4. Admin Building Privilege
+### 4. Guest WiFi Isolation Enhancement (NEW)
+**Policy**: Guest WiFi (VLAN99) must be isolated from ALL networks including Query Station
+
+```cisco
+ip access-list extended GUEST-WIFI-ISOLATION
+ ! Block access to Query Station networks
+ deny ip 192.168.99.0 0.0.0.255 13.0.0.0 0.255.255.255
+ deny ip 192.168.99.0 0.0.0.255 14.0.0.0 0.255.255.255
+ ! Block access to all campus networks
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.255
+ deny ip 192.168.99.0 0.0.0.255 192.168.20.0 0.0.0.255
+ deny ip 192.168.99.0 0.0.0.255 192.168.30.0 0.0.0.255
+ deny ip 192.168.99.0 0.0.0.255 192.168.40.0 0.0.0.255
+ ! Allow internet access
+ permit tcp any any eq 80
+ permit tcp any any eq 443
+ permit udp any any eq 53
+```
+
+**Applied to**: Router-D, VLAN 99 interface
+
+### 5. Admin Building Privilege
 **Policy**: Admin Building (Router-A) has NO ACL restrictions
 
 **Implementation**: No restrictive ACLs applied to Router-A interfaces
@@ -200,11 +254,11 @@ ip access-list extended DENY-SERVER-ACCESS
 
 | Network | Subnet Mask | CIDR | Purpose | Routing Protocol |
 |---------|-------------|------|---------|------------------|
-| 10.0.0.0 | 255.255.255.252 | /30 | ISP_2 ↔ Router-C (BGP) | BGP |
-| 11.0.0.0 | 255.255.255.252 | /30 | ISP_2 ↔ Router-E1 (EIGRP) | EIGRP |
-| 12.0.0.0 | 255.255.255.252 | /30 | ISP_2 ↔ Router-E2 (EIGRP) | EIGRP |
-| 13.0.0.0 | 255.255.255.0 | /24 | Edge Network 1 LAN | EIGRP |
-| 14.0.0.0 | 255.255.255.0 | /24 | Edge Network 2 LAN | EIGRP |
+| 10.0.0.0 | 255.0.0.0 | /8 | Library AS 600 ↔ Query Station AS 500 (BGP) | BGP |
+| 11.0.0.0 | 255.0.0.0 | /8 | Query Central ↔ Router-Q1 (EIGRP AS 1) | EIGRP |
+| 12.0.0.0 | 255.0.0.0 | /8 | Query Central ↔ Router-Q2 (EIGRP AS 1) | EIGRP |
+| 13.0.0.0 | 255.0.0.0 | /8 | Query Station Network 1 LAN (Switch-Q1) | EIGRP |
+| 14.0.0.0 | 255.0.0.0 | /8 | Query Station Network 2 LAN (Switch-Q2) | EIGRP |
 
 ### Network Removed
 
