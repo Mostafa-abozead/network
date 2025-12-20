@@ -147,37 +147,37 @@ Future Vision Smart Campus is a comprehensive network infrastructure solution de
 
 ### 3.1 Network Topology Overview
 
-The Future Vision Smart Campus network implements a **Hub-and-Spoke Distributed Routing Architecture** with enhanced perimeter security. This design provides centralized control while allowing distributed intelligence at each building location.
+The Future Vision Smart Campus network implements a **Hub-and-Spoke Distributed Routing Architecture** with multiple routing protocols. This design provides centralized control while allowing distributed intelligence at each building location, with external connectivity through ISP_2 router.
 
 ### 3.2 Core Infrastructure Components
 
-#### Internet Connectivity Layer
+#### Internet and External Connectivity Layer
 ```
-[Internet Cloud]
+[ISP_2 Router]
        |
-       | (Public IP via DHCP/Static)
+       | BGP - 10.0.0.0/8
        |
-[Cisco ASA 5506-X Firewall]
-       | (Outside Interface: Public IP)
-       | (Inside Interface: 192.168.100.1/30)
+[Router-C (Services & Library)]
        |
-[Central ISP Edge Router]
+       |
+[Central ISP Edge Router (Router-CORE)]
 ```
 
-**Firewall Positioning**: The Cisco ASA Firewall is strategically placed between the Internet Cloud and the Central ISP Router, providing:
-- Stateful packet inspection
-- NAT/PAT services for private IP translation
-- Intrusion Prevention System (IPS)
-- VPN termination capabilities
-- Application layer filtering
-- DDoS protection
+**ISP_2 Router**: External router providing connectivity using BGP protocol:
+- BGP connection to Router-C (Services and Library) using network 10.0.0.0/8
+- EIGRP connections to two additional edge routers using networks 11.0.0.0/8 and 12.0.0.0/8
+- Provides routing between campus network and external networks
+
+**EIGRP Segment**: Two additional routers connected to ISP_2 for edge connectivity:
+- Router-E1: Connected to ISP_2 via 11.0.0.0/8, LAN segment 13.0.0.0/8
+- Router-E2: Connected to ISP_2 via 12.0.0.0/8, LAN segment 14.0.0.0/8
+- Each router connects to a switch with PC, Laptop, and Access Point
 
 #### Central Hub Router
 **ISP Edge Router (Router-CORE)**
 - Model: Cisco ISR 4331
 - Role: Central aggregation point for all building routers
 - Interfaces:
-  - GigabitEthernet 0/0/0: WAN link to Firewall (192.168.100.2/30)
   - GigabitEthernet 0/0/1: Fiber to Router-A (192.168.1.1/30)
   - GigabitEthernet 0/1/0: Fiber to Router-B (192.168.2.1/30)
   - GigabitEthernet 0/1/1: Fiber to Router-C (192.168.3.1/30)
@@ -313,11 +313,16 @@ The network utilizes the private IP address space **192.168.0.0/16** with Variab
 | Network Segment | Network Address | Subnet Mask | CIDR | Usable IPs | First Host | Last Host | Broadcast | Purpose |
 |-----------------|-----------------|-------------|------|------------|------------|-----------|-----------|---------|
 | **WAN Links** |
-| Firewall-ISP Link | 192.168.100.0 | 255.255.255.252 | /30 | 2 | 192.168.100.1 | 192.168.100.2 | 192.168.100.3 | Firewall to ISP Router |
+| ISP_2-RouterC Link | 10.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 10.0.0.1 | 10.255.255.254 | 10.255.255.255 | ISP_2 to Router-C (BGP) |
+| ISP_2-RouterE1 Link | 11.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 11.0.0.1 | 11.255.255.254 | 11.255.255.255 | ISP_2 to Router-E1 (EIGRP) |
+| ISP_2-RouterE2 Link | 12.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 12.0.0.1 | 12.255.255.254 | 12.255.255.255 | ISP_2 to Router-E2 (EIGRP) |
 | ISP-RouterA Link | 192.168.1.0 | 255.255.255.252 | /30 | 2 | 192.168.1.1 | 192.168.1.2 | 192.168.1.3 | Core to Building A |
 | ISP-RouterB Link | 192.168.2.0 | 255.255.255.252 | /30 | 2 | 192.168.2.1 | 192.168.2.2 | 192.168.2.3 | Core to Building B |
 | ISP-RouterC Link | 192.168.3.0 | 255.255.255.252 | /30 | 2 | 192.168.3.1 | 192.168.3.2 | 192.168.3.3 | Core to Building C |
 | ISP-RouterD Link | 192.168.4.0 | 255.255.255.252 | /30 | 2 | 192.168.4.1 | 192.168.4.2 | 192.168.4.3 | Core to Building D |
+| **Edge Router LAN Segments** |
+| Router-E1 LAN | 13.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 13.0.0.1 | 13.255.255.254 | 13.255.255.255 | Edge Router 1 LAN |
+| Router-E2 LAN | 14.0.0.0 | 255.0.0.0 | /8 | 16,777,214 | 14.0.0.1 | 14.255.255.254 | 14.255.255.255 | Edge Router 2 LAN |
 | **Building A VLANs** |
 | VLAN 10 - Admin Staff | 192.168.10.0 | 255.255.255.128 | /25 | 126 | 192.168.10.1 | 192.168.10.126 | 192.168.10.127 | 20 PCs + 2 Printers |
 | VLAN 11 - Admin Wi-Fi | 192.168.10.128 | 255.255.255.192 | /26 | 62 | 192.168.10.129 | 192.168.10.190 | 192.168.10.191 | Staff Wireless |
@@ -377,13 +382,99 @@ ip dhcp pool ADMIN-STAFF
 
 ---
 
-## 5. DYNAMIC ROUTING PROTOCOL
+## 5. DYNAMIC ROUTING PROTOCOLS
 
-### 5.1 Protocol Selection: OSPF (Open Shortest Path First)
+### 5.1 Multi-Protocol Routing Architecture
+
+The network now implements a **multi-protocol routing architecture** combining three protocols:
+- **OSPF**: Internal campus routing (Area 0)
+- **BGP**: External routing between ISP_2 and Router-C
+- **EIGRP**: Edge routing segment connected to ISP_2
+
+### 5.2 OSPF (Open Shortest Path First) - Internal Campus Routing
 
 **Selected Protocol**: OSPF Version 2 (OSPFv2)
 **Routing Process ID**: 1
 **Area Design**: Single Area 0 (Backbone Area)
+**Scope**: All building routers (Router-CORE, Router-A, Router-B, Router-C, Router-D)
+
+### 5.3 BGP (Border Gateway Protocol) - External Connectivity
+
+**Protocol Version**: BGP-4
+**AS Numbers**: 
+- ISP_2: AS 65000
+- Campus (Router-C): AS 65001
+**Connection**: ISP_2 (10.0.0.1) to Router-C (10.0.0.2) via network 10.0.0.0/8
+
+**BGP Configuration - ISP_2**:
+```cisco
+router bgp 65000
+ bgp router-id 10.0.0.1
+ neighbor 10.0.0.2 remote-as 65001
+ network 11.0.0.0 mask 255.0.0.0
+ network 12.0.0.0 mask 255.0.0.0
+ network 13.0.0.0 mask 255.0.0.0
+ network 14.0.0.0 mask 255.0.0.0
+```
+
+**BGP Configuration - Router-C**:
+```cisco
+router bgp 65001
+ bgp router-id 10.0.0.2
+ neighbor 10.0.0.1 remote-as 65000
+ network 192.168.0.0 mask 255.255.0.0
+ redistribute ospf 1
+```
+
+### 5.4 EIGRP (Enhanced Interior Gateway Routing Protocol) - Edge Segment
+
+**Routing Process AS**: 100
+**Scope**: ISP_2, Router-E1, Router-E2
+**Networks**: 11.0.0.0/8, 12.0.0.0/8, 13.0.0.0/8, 14.0.0.0/8
+
+**EIGRP Configuration - ISP_2**:
+```cisco
+router eigrp 100
+ network 11.0.0.0 0.255.255.255
+ network 12.0.0.0 0.255.255.255
+ no auto-summary
+```
+
+**EIGRP Configuration - Router-E1**:
+```cisco
+router eigrp 100
+ network 11.0.0.0 0.255.255.255
+ network 13.0.0.0 0.255.255.255
+ no auto-summary
+```
+
+**EIGRP Configuration - Router-E2**:
+```cisco
+router eigrp 100
+ network 12.0.0.0 0.255.255.255
+ network 14.0.0.0 0.255.255.255
+ no auto-summary
+```
+
+### 5.5 Justification for Multi-Protocol Architecture
+
+#### OSPF for Internal Campus
+- Fast convergence (1-5 seconds) for internal networks
+- Hierarchical design with areas for scalability
+- Open standard suitable for educational environment
+- Well-suited for hub-and-spoke topology
+
+#### BGP for External Routing
+- Industry standard for inter-AS routing
+- Policy-based routing control
+- Scalability for external connections
+- Path vector protocol prevents routing loops between autonomous systems
+
+#### EIGRP for Edge Segment
+- Cisco-optimized protocol for specific segment
+- Fast convergence with DUAL algorithm
+- Automatic summarization capabilities
+- Low bandwidth utilization compared to other protocols
 
 ### 5.2 Justification for OSPF
 
@@ -450,13 +541,65 @@ router ospf 1
  default-information originate
 ```
 
-### 5.4 Router ID Assignment
+### 5.6 Router ID Assignment
 
-| Router | Router ID | Purpose |
-|--------|-----------|---------|
-| ISP Edge Router | 1.1.1.1 | Central hub identification |
-| Router-A (Admin) | 10.10.10.10 | Building A identifier |
-| Router-B (Academic) | 20.20.20.20 | Building B identifier |
+| Router | Router ID | Purpose | Protocol |
+|--------|-----------|---------|----------|
+| ISP Edge Router | 1.1.1.1 | Central hub identification | OSPF |
+| Router-A (Admin) | 10.10.10.10 | Building A identifier | OSPF |
+| Router-B (Academic) | 20.20.20.20 | Building B identifier | OSPF |
+| Router-C (Services) | 30.30.30.30 | Building C identifier | OSPF, BGP |
+| Router-D (Sports) | 40.40.40.40 | Building D identifier | OSPF |
+| ISP_2 | 10.0.0.1 | External ISP router | BGP, EIGRP |
+| Router-E1 | 13.0.0.1 | Edge router 1 | EIGRP |
+| Router-E2 | 14.0.0.1 | Edge router 2 | EIGRP |
+
+### 5.7 OSPF Configuration Examples
+
+#### Router-CORE (ISP Edge Router)
+```cisco
+router ospf 1
+ router-id 1.1.1.1
+ log-adjacency-changes
+ network 192.168.1.0 0.0.0.3 area 0
+ network 192.168.2.0 0.0.0.3 area 0
+ network 192.168.3.0 0.0.0.3 area 0
+ network 192.168.4.0 0.0.0.3 area 0
+```
+
+#### Router-C with BGP Redistribution
+```cisco
+router ospf 1
+ router-id 30.30.30.30
+ log-adjacency-changes
+ network 192.168.3.0 0.0.0.3 area 0
+ network 192.168.30.0 0.0.0.63 area 0
+ network 192.168.30.64 0.0.0.31 area 0
+ network 192.168.30.96 0.0.0.31 area 0
+ redistribute bgp 65001 subnets
+
+interface GigabitEthernet 0/1/0
+ description BGP Link to ISP_2
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+```
+
+### 5.8 Routing Protocol Integration
+
+#### Route Redistribution
+- **Router-C**: Redistributes OSPF routes into BGP for external advertisement
+- **Router-C**: Redistributes BGP routes into OSPF with appropriate metrics
+- **ISP_2**: Advertises EIGRP networks via BGP to campus network
+
+#### Metric Adjustment
+```cisco
+! On Router-C
+router ospf 1
+ redistribute bgp 65001 subnets metric 100 metric-type 1
+
+router bgp 65001
+ redistribute ospf 1 match internal external 1 external 2
+```
 | Router-C (Services) | 30.30.30.30 | Building C identifier |
 | Router-D (Sports) | 40.40.40.40 | Building D identifier |
 
@@ -481,132 +624,232 @@ interface GigabitEthernet 0/0/1
 
 ## 6. ACCESS CONTROL LIST (ACL) PLAN
 
-### 6.1 ACL Security Strategy
+### 6.1 Updated ACL Security Strategy
 
-Access Control Lists provide granular security enforcement to protect sensitive network resources and ensure appropriate network segmentation. The Future Vision Smart Campus implements both standard and extended ACLs at strategic points in the network.
+**IMPORTANT NOTE**: All previous Access Control Lists have been removed. The network now implements a new security policy focusing on Library access control and inter-building security rules.
 
-**⚠️ Important - Packet Tracer Compatibility Note**:
-All ACL configurations in this document are compatible with Cisco Packet Tracer. Note that Packet Tracer **does not support the `log` keyword** in ACL statements. If implementing in production IOS, you can add `log` to the end of deny statements for security monitoring. For Packet Tracer implementation, the `log` keyword must be omitted.
+Access Control Lists provide granular security enforcement to protect sensitive network resources. The Future Vision Smart Campus now implements the following ACL policies:
 
-**Syntax Differences**:
-- ✅ **Packet Tracer**: `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127`
-- ❌ **Production IOS** (not for PT): `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127 log`
+1. **Library Access Control**: Only Library PCs permitted to access the network
+2. **Admin Building Protection**: All buildings denied access to Admin Building
+3. **Services Building Protection**: Student Building denied access to Services Building servers
+4. **Admin Building Privilege**: Admin Building has full access to all resources
 
-### 6.2 ACL Rule 1: Guest Wi-Fi Isolation
+**⚠️ Packet Tracer Compatibility Note**:
+All ACL configurations are compatible with Cisco Packet Tracer. Packet Tracer **does not support the `log` keyword**.
 
-**Objective**: Deny Guest Wi-Fi (Building D - VLAN 99) from accessing Internal Servers (Building C - VLAN 31) and Admin PCs (Building A - VLAN 10)
+### 6.2 NEW ACL Rule 1: Library Access Control
 
-**Implementation Location**: Router-D (Sports & Events building router)
+**Objective**: Permit ONLY Library PCs (VLAN 30) to access the network, deny all other traffic from Library segment
+
+**Implementation Location**: Router-C (Services & Library building router)
 
 **ACL Configuration**:
-```
-! Extended ACL to block Guest access to sensitive networks
-! Note: For production deployments, consider using object groups for better maintainability
-ip access-list extended GUEST-RESTRICTION
- ! Block access to Admin VLAN (192.168.10.0/25)
- deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
- ! Block access to Server VLAN (192.168.30.64/27)
- deny ip 192.168.99.0 0.0.0.255 192.168.30.64 0.0.0.31
- ! Block access to Security Monitoring VLAN (192.168.30.96/27)
- deny ip 192.168.99.0 0.0.0.255 192.168.30.96 0.0.0.31
- ! Allow internet access only (HTTP/HTTPS)
- permit tcp 192.168.99.0 0.0.0.255 any eq 80
- permit tcp 192.168.99.0 0.0.0.255 any eq 443
- permit tcp 192.168.99.0 0.0.0.255 any eq 53
- permit udp 192.168.99.0 0.0.0.255 any eq 53
- ! Deny all other traffic
- deny ip 192.168.99.0 0.0.0.255 any
- ! Implicit permit for return traffic
- permit tcp any 192.168.99.0 0.0.0.255 established
+```cisco
+! Extended ACL for Library access control
+ip access-list extended LIBRARY-ACCESS-CONTROL
+ ! Permit Library PCs to access all networks
+ permit ip 192.168.30.0 0.0.0.63 any
+ ! Deny all other traffic from Library segment (including servers, monitoring)
+ deny ip 192.168.30.64 0.0.0.31 any
+ deny ip 192.168.30.96 0.0.0.31 any
+ ! Permit return traffic
+ permit ip any 192.168.30.0 0.0.0.63
 !
-! Apply ACL to Guest VLAN interface
-interface GigabitEthernet 0/0.99
- ip access-group GUEST-RESTRICTION in
+! Apply ACL to Library VLAN interface
+interface GigabitEthernet 0/0/1.30
+ ip access-group LIBRARY-ACCESS-CONTROL in
 ```
 
 **Security Benefits**:
-- Prevents unauthorized access to critical systems
-- Limits guest traffic to internet-only access
-- Protects against lateral movement attacks
-- Allows DNS for internet name resolution
+- Ensures only Library user PCs can initiate connections
+- Prevents unauthorized access from server/monitoring segments
+- Maintains access control integrity for public access areas
 
 ---
 
-### 6.3 ACL Rule 2: Student Lab Restrictions
+### 6.3 NEW ACL Rule 2: Admin Building Full Access
 
-**Objective**: Deny Students (Building B - VLAN 20) from accessing Admin VLAN (Building A - VLAN 10)
+**Objective**: Permit Admin Building (Building A) full access to ALL school resources
+
+**Implementation Location**: Router-A (Administration building router)
+
+**ACL Configuration**:
+```cisco
+! Standard ACL permitting all Admin traffic
+! No ACL restrictions on Admin Building
+! Admin users have full access to all networks
+! This is implemented by NOT applying any restrictive ACL on Router-A interfaces
+```
+
+**Note**: Admin Building requires no restrictive ACLs as it has privileged access to all resources.
+
+---
+
+### 6.4 NEW ACL Rule 3: Protect Admin Building from Other Buildings
+
+**Objective**: Deny ALL buildings access to Admin Building resources (Building A - VLANs 10, 11, 12)
+
+**Implementation Locations**: Router-B, Router-C, Router-D
+
+**ACL Configuration - Router-B (Academic Building)**:
+```cisco
+! Extended ACL denying access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny access to Admin Staff VLAN
+ deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
+ ! Deny access to Admin Wi-Fi VLAN
+ deny ip 192.168.20.0 0.0.0.127 192.168.10.128 0.0.0.63
+ ! Deny access to Admin Cameras VLAN
+ deny ip 192.168.20.0 0.0.0.127 192.168.10.192 0.0.0.31
+ ! Permit all other traffic
+ permit ip any any
+!
+! Apply ACL to Student Lab VLAN interface
+interface GigabitEthernet 0/0/1.20
+ ip access-group DENY-ADMIN-ACCESS in
+!
+! Also apply to other VLANs in Building B
+interface GigabitEthernet 0/0/1.21
+ ip access-group DENY-ADMIN-ACCESS in
+!
+interface GigabitEthernet 0/0/1.22
+ ip access-group DENY-ADMIN-ACCESS in
+!
+interface GigabitEthernet 0/0/1.23
+ ip access-group DENY-ADMIN-ACCESS in
+```
+
+**ACL Configuration - Router-C (Services & Library)**:
+```cisco
+! Extended ACL denying Library/Services access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny Library users access to Admin VLANs
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.0 0.0.0.127
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.128 0.0.0.63
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.192 0.0.0.31
+ ! Permit all other traffic
+ permit ip any any
+!
+! Apply to Library VLAN
+interface GigabitEthernet 0/0/1.30
+ ip access-group DENY-ADMIN-ACCESS in
+```
+
+**ACL Configuration - Router-D (Sports & Events)**:
+```cisco
+! Extended ACL denying Sports/Events access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny Sports staff access to Admin VLANs
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.0 0.0.0.127
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.128 0.0.0.63
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.192 0.0.0.31
+ ! Deny Guest Wi-Fi access to Admin VLANs
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.128 0.0.0.63
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.192 0.0.0.31
+ ! Permit all other traffic
+ permit ip any any
+!
+! Apply to Sports Staff VLAN
+interface GigabitEthernet 0/0/1.40
+ ip access-group DENY-ADMIN-ACCESS in
+!
+! Apply to Guest Wi-Fi VLAN
+interface GigabitEthernet 0/0/1.99
+ ip access-group DENY-ADMIN-ACCESS in
+```
+
+**Security Benefits**:
+- Protects Admin Building from unauthorized access
+- Enforces strict access control to sensitive administrative resources
+- Prevents lateral movement from other buildings
+- Maintains administrative privilege separation
+
+---
+
+### 6.5 NEW ACL Rule 4: Deny Student Building Access to Services Building Servers
+
+**Objective**: Deny Student Building (Building B) direct access to Services Building servers (VLAN 31) to ensure data integrity
 
 **Implementation Location**: Router-B (Academic Block router)
 
 **ACL Configuration**:
-```
-! Extended ACL to restrict student access
-ip access-list extended STUDENT-RESTRICTION
- ! Block access to all Admin VLANs
- deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
- deny ip 192.168.20.0 0.0.0.127 192.168.10.128 0.0.0.63
- deny ip 192.168.20.0 0.0.0.127 192.168.10.192 0.0.0.31
- ! Allow access to library resources
- permit ip 192.168.20.0 0.0.0.127 192.168.30.0 0.0.0.63
- ! Allow access to educational servers
- permit ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
- ! Allow internet access
- permit ip 192.168.20.0 0.0.0.127 any
+```cisco
+! Extended ACL denying student access to servers
+ip access-list extended DENY-SERVER-ACCESS
+ ! Deny Student Lab access to Server VLAN
+ deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
+ ! Deny Teacher access to Server VLAN
+ deny ip 192.168.20.128 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Permit access to Library (public resources)
+ permit ip any 192.168.30.0 0.0.0.63
+ ! Permit all other traffic
+ permit ip any any
 !
 ! Apply ACL to Student VLAN interface
-interface GigabitEthernet 0/0.20
- ip access-group STUDENT-RESTRICTION in
+interface GigabitEthernet 0/0/1.20
+ ip access-group DENY-SERVER-ACCESS in
+!
+! Apply ACL to Teacher VLAN interface
+interface GigabitEthernet 0/0/1.21
+ ip access-group DENY-SERVER-ACCESS in
 ```
 
 **Security Benefits**:
-- Protects administrative systems from student access
-- Prevents unauthorized changes to sensitive data
-- Maintains educational access to appropriate resources
-- Supports institutional security policies
+- Protects critical servers (NVR, IoT Management) from student access
+- Ensures data integrity by preventing direct server access
+- Students can still access Library public resources
+- Prevents unauthorized data modification or exfiltration
 
 ---
 
-### 6.4 ACL Rule 3: Firewall Traffic Filtering
+### 6.6 ACL Implementation Summary
 
-**Objective**: Permit HTTP/HTTPS traffic through Cisco ASA Firewall while blocking unauthorized protocols
+| Building | ACL Policy | Purpose | Applied On |
+|----------|-----------|---------|------------|
+| Admin (A) | None (Full Access) | Admin has access to all resources | No restrictions |
+| Academic (B) | DENY-ADMIN-ACCESS | Block access to Admin Building | All Building B VLANs |
+| Academic (B) | DENY-SERVER-ACCESS | Block access to Services servers | Student & Teacher VLANs |
+| Services (C) | LIBRARY-ACCESS-CONTROL | Only Library PCs can access network | VLAN 30 |
+| Services (C) | DENY-ADMIN-ACCESS | Block access to Admin Building | VLAN 30 |
+| Sports (D) | DENY-ADMIN-ACCESS | Block access to Admin Building | VLANs 40, 99 |
 
-**Implementation Location**: Cisco ASA 5506-X Firewall
+### 6.7 Removed ACLs
 
-**ASA Configuration**:
+The following ACLs from the previous design have been **REMOVED**:
+- ❌ GUEST-RESTRICTION (Guest Wi-Fi isolation - removed)
+- ❌ STUDENT-RESTRICTION (Old student restrictions - removed)
+- ❌ Firewall ACLs (OUTSIDE-IN, INSIDE-OUT - firewall removed)
+- ❌ IOT-ISOLATION (IoT device isolation - removed)
+- ❌ SSH Access Control ACLs (VTY line protection - removed)
+
+### 6.8 ACL Verification Commands
+
+```cisco
+! View configured ACLs
+show access-lists
+
+! View ACL statistics
+show ip access-lists
+
+! Verify ACL application on interfaces
+show ip interface GigabitEthernet 0/0/1.20
+show ip interface GigabitEthernet 0/0/1.30
+
+! Test ACL functionality
+! From Student PC (should be denied):
+ping 192.168.10.10  ! Admin Building - should fail
+ping 192.168.30.70  ! Server VLAN - should fail
+
+! From Admin PC (should succeed):
+ping 192.168.30.70  ! Server access - should work
+ping 192.168.20.10  ! Student access - should work
 ```
-! Object definitions
-object-group service ALLOWED-INTERNET
- service-object tcp destination eq 80
- service-object tcp destination eq 443
- service-object tcp destination eq 53
- service-object udp destination eq 53
- service-object icmp
+ ip access-group STUDENT-RESTRICTION in
+```
 
-! Access list for outside interface
-access-list OUTSIDE-IN extended deny ip any 192.168.0.0 255.255.0.0
-access-list OUTSIDE-IN extended deny ip any 10.0.0.0 255.0.0.0
-access-list OUTSIDE-IN extended deny ip any 172.16.0.0 255.240.0.0
-access-list OUTSIDE-IN extended permit tcp any any established
-access-list OUTSIDE-IN extended permit icmp any any echo-reply
-access-list OUTSIDE-IN extended deny ip any any
-
-! Access list for inside interface
-access-list INSIDE-OUT extended permit object-group ALLOWED-INTERNET any any
-access-list INSIDE-OUT extended permit icmp any any
-access-list INSIDE-OUT extended permit udp any any eq ntp
-access-list INSIDE-OUT extended deny ip any any log
-
-! Apply ACLs to interfaces
-access-group OUTSIDE-IN in interface outside
-access-group INSIDE-OUT in interface inside
-
-! NAT Configuration (PAT)
-object network CAMPUS-NETWORK
- subnet 192.168.0.0 255.255.0.0
- nat (inside,outside) dynamic interface
-
-! Inspection policies
-policy-map global_policy
+---
  class inspection_default
   inspect icmp
   inspect http
@@ -623,62 +866,15 @@ policy-map global_policy
 
 ---
 
-### 6.5 Additional ACL Best Practices
-
-#### IoT Device Isolation
-```
-! Prevent IoT devices from initiating connections to PCs
-ip access-list extended IOT-ISOLATION
- ! Smart Boards can only receive connections
- deny ip 192.168.20.192 0.0.0.31 192.168.20.0 0.0.0.127
- ! Scoreboards isolated from staff PCs
- deny ip 192.168.40.32 0.0.0.31 192.168.40.0 0.0.0.31
- ! Allow IoT to Server VLAN for management
- permit ip any 192.168.30.64 0.0.0.31
- ! Permit established connections
- permit tcp any any established
-```
-
-#### Administrative Access Control
-```
-! VTY line protection for router management
-access-list 1 permit 192.168.10.0 0.0.0.127
-access-list 1 permit 192.168.30.96 0.0.0.31
-access-list 1 deny any log
-!
-line vty 0 4
- access-class 1 in
- transport input ssh
-```
-
-### 6.6 ACL Monitoring and Maintenance
-
-**Logging Configuration**:
-```
-! Enable ACL logging
-logging buffered 51200
-logging console warnings
-logging trap informational
-! Send logs to NVR/Server system in Building C (VLAN 31)
-logging host 192.168.30.65
-
-! Log ACL matches
-ip access-list extended GUEST-RESTRICTION
- 10 deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127 log
-```
-
-**Regular Review Schedule**:
-- Weekly review of ACL hit counters
-- Monthly audit of deny log entries
-- Quarterly ACL policy updates based on security assessments
-
----
-
 ## 7. BILL OF MATERIALS (BUDGET)
 
 ### 7.1 Budget Overview
 
-The following Bill of Materials provides a comprehensive cost estimate for implementing the Future Vision Smart Campus network infrastructure. Prices are based on current market rates for educational institutions (with standard educational discounts applied).
+The following Bill of Materials provides a comprehensive cost estimate for implementing the updated Future Vision Smart Campus network infrastructure with the new topology changes. Prices are based on current market rates for educational institutions (with standard educational discounts applied).
+
+**Key Changes**:
+- Removed: Cloud and Firewall components
+- Added: ISP_2 router, Router-E1, Router-E2, Switch-E1, Switch-E2, and additional end devices
 
 ### 7.2 Detailed Equipment List
 
@@ -690,18 +886,24 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 | ISP Edge Router | Cisco ISR 4331 | 1 | $3,500 | $3,500 | 3 GE ports, 2 SFP slots, 4GB RAM |
 | Building Router (Large) | Cisco ISR 4321 | 2 | $2,800 | $5,600 | 2 GE ports, 2 SFP slots, 4GB RAM |
 | Building Router (Medium) | Cisco ISR 4221 | 2 | $1,900 | $3,800 | 2 GE ports, 2 SFP slots, 4GB RAM |
-| **Firewall** |
-| Perimeter Firewall | Cisco ASA 5506-X | 1 | $650 | $650 | 8 GE ports, FirePOWER services |
-| **Subtotal Routers & Firewall** | | | | **$13,550** | |
+| **New - External Routers** |
+| ISP_2 Router | Cisco ISR 4331 | 1 | $3,500 | $3,500 | BGP + EIGRP capable |
+| Edge Router E1 | Cisco ISR 4221 | 1 | $1,900 | $1,900 | EIGRP capable |
+| Edge Router E2 | Cisco ISR 4221 | 1 | $1,900 | $1,900 | EIGRP capable |
+| **Removed - Firewall** |
+| ~~Perimeter Firewall~~ | ~~Cisco ASA 5506-X~~ | ~~1~~ | ~~$650~~ | ~~-$650~~ | Removed from topology |
+| **Subtotal Routers** | | | | **$19,550** | |
 
 #### 7.2.2 Switching Infrastructure
 
 | Item | Model | Quantity | Unit Price (USD) | Total Price (USD) | Specifications |
 |------|-------|----------|------------------|-------------------|----------------|
 | Core Switch (Building B) | Cisco Catalyst 3650-24PD | 1 | $4,200 | $4,200 | 24 PoE+ ports, Layer 3, 10G uplink |
-| Access Switches | Cisco Catalyst 2960-24TT | 3 | $1,200 | $3,600 | 24 ports, Layer 2, 2 SFP uplinks |
-| Access Switch (Building D) | Cisco Catalyst 2960-24TT | 1 | $1,200 | $1,200 | 24 ports, Layer 2, 2 SFP uplinks |
-| **Subtotal Switches** | | | | **$9,000** | |
+| Access Switches (Buildings) | Cisco Catalyst 2960-24TT | 4 | $1,200 | $4,800 | 24 ports, Layer 2, 2 SFP uplinks |
+| **New - Edge Switches** |
+| Edge Switch E1 | Cisco Catalyst 2960-24TT | 1 | $1,200 | $1,200 | For Router-E1 LAN segment |
+| Edge Switch E2 | Cisco Catalyst 2960-24TT | 1 | $1,200 | $1,200 | For Router-E2 LAN segment |
+| **Subtotal Switches** | | | | **$11,400** | |
 
 #### 7.2.3 Wireless Infrastructure
 
@@ -740,7 +942,14 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 | Library Public PCs | Dell OptiPlex 3080 | 15 | $650 | $9,750 | i3, 8GB RAM, 256GB SSD |
 | Coach/Staff PCs | Dell OptiPlex 3090 | 3 | $750 | $2,250 | i5, 8GB RAM, 256GB SSD |
 | Network Printers | HP LaserJet Enterprise | 2 | $1,800 | $3,600 | 50ppm, Duplex, Network |
-| **Subtotal End-User Devices** | | | | **$98,850** | |
+| **New - Edge Segment Devices** |
+| Edge PCs (E1) | Dell OptiPlex 3080 | 1 | $650 | $650 | For Router-E1 LAN |
+| Edge Laptops (E1) | HP ProBook 450 G8 | 1 | $900 | $900 | For Router-E1 LAN |
+| Edge Access Point (E1) | Cisco Aironet 1852i | 1 | $950 | $950 | For Router-E1 LAN |
+| Edge PCs (E2) | Dell OptiPlex 3080 | 1 | $650 | $650 | For Router-E2 LAN |
+| Edge Laptops (E2) | HP ProBook 450 G8 | 1 | $900 | $900 | For Router-E2 LAN |
+| Edge Access Point (E2) | Cisco Aironet 1852i | 1 | $950 | $950 | For Router-E2 LAN |
+| **Subtotal End-User Devices** | | | | **$103,850** | |
 
 #### 7.2.7 Cabling & Infrastructure
 
@@ -759,23 +968,24 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 
 | Item | Description | Quantity | Unit Price (USD) | Total Price (USD) | Period |
 |------|-------------|----------|------------------|-------------------|--------|
-| Cisco IOS Licenses | Advanced IP Services | 5 | $400 | $2,000 | Perpetual |
-| ASA Firewall License | FirePOWER Services | 1 | $500 | $500 | 3 years |
-| Wireless Controller Licenses | Additional AP Licenses | 3 | $150 | $450 | Perpetual |
+| Cisco IOS Licenses | Advanced IP Services | 8 | $400 | $3,200 | Perpetual (includes new routers) |
+| ~~ASA Firewall License~~ | ~~FirePOWER Services~~ | ~~1~~ | ~~$500~~ | ~~-$500~~ | Removed |
+| Wireless Controller Licenses | Additional AP Licenses | 5 | $150 | $750 | Perpetual (includes new APs) |
 | NVR Software License | Recording & Management | 12 cameras | $50 | $600 | Annual |
 | Network Management | Cisco DNA Center (Essentials) | 1 | $3,000 | $3,000 | 3 years |
-| **Subtotal Software** | | | | **$6,550** | |
+| BGP/EIGRP License | Advanced Routing Protocols | 3 | $300 | $900 | Perpetual |
+| **Subtotal Software** | | | | **$7,950** | |
 
 #### 7.2.9 Installation & Professional Services
 
 | Item | Description | Quantity | Unit Price (USD) | Total Price (USD) | Notes |
 |------|-------------|----------|------------------|-------------------|-------|
-| Network Design Services | Professional Consulting | 40 hrs | $150/hr | $6,000 | Architecture & Planning |
-| Installation Services | Equipment Setup | 80 hrs | $100/hr | $8,000 | Router/Switch Configuration |
-| Testing & Validation | System Testing | 24 hrs | $125/hr | $3,000 | Performance & Security Testing |
-| Documentation | Network Documentation | 20 hrs | $100/hr | $2,000 | As-built drawings, configs |
-| Training | Staff Training | 16 hrs | $150/hr | $2,400 | IT staff & administrators |
-| **Subtotal Professional Services** | | | | **$21,400** | |
+| Network Design Services | Professional Consulting | 50 hrs | $150/hr | $7,500 | Architecture & Multi-protocol planning |
+| Installation Services | Equipment Setup | 100 hrs | $100/hr | $10,000 | Router/Switch Configuration (more routers) |
+| Testing & Validation | System Testing | 30 hrs | $125/hr | $3,750 | BGP/EIGRP/OSPF testing |
+| Documentation | Network Documentation | 25 hrs | $100/hr | $2,500 | As-built drawings, configs |
+| Training | Staff Training | 20 hrs | $150/hr | $3,000 | Multi-protocol routing training |
+| **Subtotal Professional Services** | | | | **$26,750** | |
 
 #### 7.2.10 Contingency & Maintenance
 
@@ -789,36 +999,44 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 
 ### 7.3 Budget Summary
 
-| Category | Total Cost (USD) | Percentage of Total |
-|----------|------------------|---------------------|
-| Routers & Firewall | $13,550 | 4.8% |
-| Switches | $9,000 | 3.2% |
-| Wireless Infrastructure | $7,850 | 2.8% |
-| Security & Surveillance | $11,500 | 4.1% |
-| IoT & Smart Devices | $63,700 | 22.6% |
-| End-User Devices | $98,850 | 35.1% |
-| Cabling & Infrastructure | $16,350 | 5.8% |
-| Software & Licensing | $6,550 | 2.3% |
-| Professional Services | $21,400 | 7.6% |
-| Contingency & Maintenance | $35,933 | 12.7% |
-| **GRAND TOTAL** | **$284,683** | **100%** |
+| Category | Total Cost (USD) | Percentage of Total | Change from Previous |
+|----------|------------------|---------------------|----------------------|
+| Routers (No Firewall) | $19,550 | 6.5% | +$6,000 (3 new routers) |
+| Switches | $11,400 | 3.8% | +$2,400 (2 new switches) |
+| Wireless Infrastructure | $7,850 | 2.6% | No change |
+| Security & Surveillance | $11,500 | 3.8% | No change |
+| IoT & Smart Devices | $63,700 | 21.2% | No change |
+| End-User Devices | $103,850 | 34.6% | +$5,000 (6 new devices) |
+| Cabling & Infrastructure | $16,350 | 5.4% | No change |
+| Software & Licensing | $7,950 | 2.6% | +$1,400 |
+| Professional Services | $26,750 | 8.9% | +$5,350 |
+| Contingency & Maintenance | $31,250 | 10.4% | Recalculated |
+| **GRAND TOTAL** | **$300,150** | **100%** | **+$15,467** |
+
+**Key Changes**:
+- ❌ Removed: Cisco ASA Firewall (-$650)
+- ✅ Added: ISP_2 Router (+$3,500)
+- ✅ Added: 2× Edge Routers (+$3,800)
+- ✅ Added: 2× Edge Switches (+$2,400)
+- ✅ Added: 6× End devices for edge segments (+$5,000)
+- ✅ Added: BGP/EIGRP licensing and training (+$6,750)
 
 ---
 
 ### 7.4 Funding Recommendations
 
 #### Phase 1 - Core Infrastructure (Priority: Critical)
-**Budget**: $60,300
-- All routers and firewall
-- All switches
+**Budget**: $70,000
+- All routers (including ISP_2, Edge routers)
+- All switches (including Edge switches)
 - Fiber optic cabling
-- Basic configuration services
+- BGP/EIGRP/OSPF configuration services
 
 **Timeline**: Months 1-2
 
 #### Phase 2 - Security & Connectivity (Priority: High)
 **Budget**: $27,200
-- Wireless infrastructure
+- Wireless infrastructure (including edge APs)
 - Security cameras and NVR
 - Cat6a cabling installation
 - Professional installation
@@ -826,8 +1044,8 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 **Timeline**: Months 2-3
 
 #### Phase 3 - End-User Deployment (Priority: Medium)
-**Budget**: $161,350
-- All end-user devices (PCs, laptops)
+**Budget**: $171,700
+- All end-user devices (PCs, laptops, edge devices)
 - IoT devices and smart boards
 - Printers and peripherals
 - Software licensing
@@ -835,8 +1053,8 @@ The following Bill of Materials provides a comprehensive cost estimate for imple
 **Timeline**: Months 3-4
 
 #### Phase 4 - Optimization & Training (Priority: Low)
-**Budget**: $35,933
-- Staff training
+**Budget**: $31,250
+- Multi-protocol routing training
 - Documentation
 - Testing and validation
 - Contingency reserve
