@@ -9,14 +9,23 @@
 2. [Configuration Overview](#configuration-overview)
 3. [Core Router Configuration](#core-router-configuration)
 4. [Building Router Configuration](#building-router-configuration)
-5. [Switch Configuration](#switch-configuration)
-6. [Firewall Configuration](#firewall-configuration)
+5. [ISP_2 and Edge Routers Configuration](#isp_2-and-edge-routers-configuration)
+6. [Switch Configuration](#switch-configuration)
 7. [OSPF Routing Configuration](#ospf-routing-configuration)
-8. [ACL Security Configuration](#acl-security-configuration)
-9. [DHCP Configuration](#dhcp-configuration)
-10. [End Device Configuration](#end-device-configuration)
-11. [Testing & Verification](#testing--verification)
-12. [Troubleshooting Guide](#troubleshooting-guide)
+8. [BGP Configuration](#bgp-configuration)
+9. [EIGRP Configuration](#eigrp-configuration)
+10. [NEW ACL Security Configuration](#new-acl-security-configuration)
+11. [DHCP Configuration](#dhcp-configuration)
+12. [End Device Configuration](#end-device-configuration)
+13. [Testing & Verification](#testing--verification)
+14. [Troubleshooting Guide](#troubleshooting-guide)
+
+**IMPORTANT CHANGES IN THIS VERSION**:
+- ❌ **REMOVED**: Cloud and Firewall components
+- ✅ **ADDED**: ISP_2 router with BGP to Router-C
+- ✅ **ADDED**: EIGRP segment with Router-E1 and Router-E2
+- ✅ **ADDED**: Edge switches and end devices
+- ✅ **CHANGED**: All Access Control Lists replaced with new security policies
 
 ---
 
@@ -40,14 +49,34 @@ Before starting configuration, ensure:
 
 Follow this sequence for optimal implementation:
 
-1. **Core Infrastructure First**: ISP Edge Router, Firewall
+1. **Core Infrastructure First**: ISP Edge Router (Router-CORE)
 2. **Building Routers**: Router-A, Router-B, Router-C, Router-D
-3. **Switches**: Configure VLANs and trunking
-4. **Routing Protocol**: Enable OSPF on all routers
-5. **Security**: Apply ACLs and firewall rules
-6. **Services**: Configure DHCP, DNS
-7. **End Devices**: Configure IP addressing
-8. **Testing**: Verify connectivity and security
+3. **External Router**: ISP_2 router
+4. **Edge Routers**: Router-E1, Router-E2
+5. **Switches**: Configure VLANs and trunking (all building switches + edge switches)
+6. **Routing Protocols**: 
+   - Enable OSPF on campus routers
+   - Configure BGP between ISP_2 and Router-C
+   - Configure EIGRP between ISP_2 and edge routers
+7. **Security**: Apply NEW ACLs (old ACLs removed)
+8. **Services**: Configure DHCP, DNS
+9. **End Devices**: Configure IP addressing
+10. **Testing**: Verify connectivity and security
+
+### Key Network Changes
+
+**Removed Components**:
+- ❌ Internet Cloud device
+- ❌ Cisco ASA Firewall
+- ❌ Firewall-ISP link (192.168.100.0/30)
+
+**New Components**:
+- ✅ ISP_2 Router (Cisco ISR 4331)
+- ✅ Router-E1 (Cisco ISR 4221) - Edge router 1
+- ✅ Router-E2 (Cisco ISR 4221) - Edge router 2
+- ✅ Switch-E1 (Cisco Catalyst 2960) - For 13.0.0.0/24 network
+- ✅ Switch-E2 (Cisco Catalyst 2960) - For 14.0.0.0/24 network
+- ✅ Edge devices: 2 PCs, 2 Laptops, 2 Access Points
 
 ### Access Methods
 
@@ -116,12 +145,7 @@ write memory
 ```cisco
 configure terminal
 
-! WAN Interface to Firewall
-interface GigabitEthernet 0/0/0
- description WAN Link to ASA Firewall
- ip address 192.168.100.2 255.255.255.252
- no shutdown
- exit
+! NOTE: Firewall interface removed - no longer needed
 
 ! Link to Building A - Router-A
 interface GigabitEthernet 0/0/1
@@ -163,14 +187,16 @@ write memory
 show ip interface brief
 
 ! Expected output shows all interfaces "up/up"
-! Gi0/0/0: 192.168.100.2
 ! Gi0/0/1: 192.168.1.1
 ! Gi0/1/0: 192.168.2.1
 ! Gi0/1/1: 192.168.3.1
 ! Se0/2/0: 192.168.4.1
 
-! Test connectivity (after configuring firewall)
-ping 192.168.100.1
+! Test connectivity to building routers (after they're configured)
+ping 192.168.1.2
+ping 192.168.2.2
+ping 192.168.3.2
+ping 192.168.4.2
 ```
 
 ---
@@ -909,61 +935,236 @@ write memory
 
 ---
 
-## Firewall Configuration
+## ISP_2 and Edge Routers Configuration
 
-### Cisco ASA 5506-X Configuration
+### ISP_2 Router (External Router) - Cisco ISR 4331
 
-**Note**: In Packet Tracer, ASA configuration may be simplified. Use available ASA device (5505 or 5506-X).
+**Purpose**: External router providing BGP connectivity to Router-C and EIGRP connectivity to edge routers.
+
+#### Step 1: Basic Configuration
 
 ```cisco
 enable
 configure terminal
 
-hostname ASA-Campus-FW
+hostname ISP_2
 
-! Configure interfaces
-interface GigabitEthernet 1/1
- nameif outside
- security-level 0
- ip address dhcp
+! Security configuration
+enable secret class
+service password-encryption
+no ip domain-lookup
+
+! Console and VTY
+line console 0
+ password cisco
+ login
+ logging synchronous
+ exit
+
+line vty 0 4
+ password cisco
+ login
+ transport input ssh
+ exit
+
+banner motd #
+****************************************************
+*  ISP_2 External Router                          *
+*  BGP + EIGRP                                    *
+****************************************************
+#
+
+end
+write memory
+```
+
+#### Step 2: Interface Configuration
+
+```cisco
+configure terminal
+
+! BGP Link to Router-C (Services & Library)
+interface GigabitEthernet 0/0/0
+ description BGP Link to Router-C
+ ip address 10.0.0.1 255.255.255.252
  no shutdown
  exit
 
-interface GigabitEthernet 1/2
- nameif inside
- security-level 100
- ip address 192.168.100.1 255.255.255.252
+! EIGRP Link to Router-E1
+interface GigabitEthernet 0/0/1
+ description EIGRP Link to Router-E1
+ ip address 11.0.0.1 255.255.255.252
  no shutdown
  exit
 
-! Default route to Internet
-route outside 0.0.0.0 0.0.0.0 dhcp 1
-
-! Static route to campus networks
-route inside 192.168.0.0 255.255.0.0 192.168.100.2 1
-
-! NAT Configuration (PAT)
-object network CAMPUS-NET
- subnet 192.168.0.0 255.255.0.0
- nat (inside,outside) dynamic interface
+! EIGRP Link to Router-E2
+interface GigabitEthernet 0/1/0
+ description EIGRP Link to Router-E2
+ ip address 12.0.0.1 255.255.255.252
+ no shutdown
  exit
 
-! Access Control Lists
-access-list OUTSIDE-IN extended deny ip any 192.168.0.0 255.255.0.0
-access-list OUTSIDE-IN extended permit tcp any any established
-access-list OUTSIDE-IN extended permit icmp any any echo-reply
-access-list OUTSIDE-IN extended deny ip any any
+end
+write memory
+```
 
-access-list INSIDE-OUT extended permit tcp any any eq 80
-access-list INSIDE-OUT extended permit tcp any any eq 443
-access-list INSIDE-OUT extended permit tcp any any eq 53
-access-list INSIDE-OUT extended permit udp any any eq 53
-access-list INSIDE-OUT extended permit icmp any any
-access-list INSIDE-OUT extended deny ip any any log
+---
 
-! Apply ACLs
-access-group OUTSIDE-IN in interface outside
-access-group INSIDE-OUT in interface inside
+### Router-E1 (Edge Router 1) - Cisco ISR 4221
+
+**Purpose**: Edge router for 13.0.0.0/24 network segment.
+
+#### Step 1: Basic Configuration
+
+```cisco
+enable
+configure terminal
+
+hostname Router-E1
+
+enable secret class
+service password-encryption
+no ip domain-lookup
+
+line console 0
+ password cisco
+ login
+ exit
+
+line vty 0 4
+ password cisco
+ login
+ transport input ssh
+ exit
+
+end
+write memory
+```
+
+#### Step 2: Interface Configuration
+
+```cisco
+configure terminal
+
+! WAN Interface to ISP_2
+interface GigabitEthernet 0/0/0
+ description EIGRP Link to ISP_2
+ ip address 11.0.0.2 255.255.255.252
+ no shutdown
+ exit
+
+! LAN Interface to Switch-E1
+interface GigabitEthernet 0/0/1
+ description LAN to Switch-E1
+ ip address 13.0.0.1 255.255.255.0
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+---
+
+### Router-E2 (Edge Router 2) - Cisco ISR 4221
+
+**Purpose**: Edge router for 14.0.0.0/24 network segment.
+
+#### Step 1: Basic Configuration
+
+```cisco
+enable
+configure terminal
+
+hostname Router-E2
+
+enable secret class
+service password-encryption
+no ip domain-lookup
+
+line console 0
+ password cisco
+ login
+ exit
+
+line vty 0 4
+ password cisco
+ login
+ transport input ssh
+ exit
+
+end
+write memory
+```
+
+#### Step 2: Interface Configuration
+
+```cisco
+configure terminal
+
+! WAN Interface to ISP_2
+interface GigabitEthernet 0/0/0
+ description EIGRP Link to ISP_2
+ ip address 12.0.0.2 255.255.255.252
+ no shutdown
+ exit
+
+! LAN Interface to Switch-E2
+interface GigabitEthernet 0/0/1
+ description LAN to Switch-E2
+ ip address 14.0.0.1 255.255.255.0
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+---
+
+### Switch-E1 (Edge Switch 1) - Cisco Catalyst 2960
+
+```cisco
+enable
+configure terminal
+
+hostname Switch-E1
+
+enable secret class
+service password-encryption
+
+! Configure access ports for end devices
+interface range FastEthernet 0/1-3
+ description Edge Devices (PC, Laptop, AP)
+ switchport mode access
+ spanning-tree portfast
+ no shutdown
+ exit
+
+end
+write memory
+```
+
+---
+
+### Switch-E2 (Edge Switch 2) - Cisco Catalyst 2960
+
+```cisco
+enable
+configure terminal
+
+hostname Switch-E2
+
+enable secret class
+service password-encryption
+
+! Configure access ports for end devices
+interface range FastEthernet 0/1-3
+ description Edge Devices (PC, Laptop, AP)
+ switchport mode access
+ spanning-tree portfast
+ no shutdown
+ exit
 
 end
 write memory
@@ -981,12 +1182,11 @@ configure terminal
 router ospf 1
  router-id 1.1.1.1
  log-adjacency-changes
- passive-interface GigabitEthernet 0/0/0
+ ! Note: No passive interface for Gi0/0/0 since firewall is removed
  network 192.168.1.0 0.0.0.3 area 0
  network 192.168.2.0 0.0.0.3 area 0
  network 192.168.3.0 0.0.0.3 area 0
  network 192.168.4.0 0.0.0.3 area 0
- default-information originate
  exit
 
 end
@@ -1032,19 +1232,32 @@ end
 write memory
 ```
 
-### Configure OSPF on Router-C
+### Configure OSPF on Router-C (with BGP Redistribution)
+
+**Important**: Router-C runs both OSPF (for campus) and BGP (for ISP_2 connectivity)
 
 ```cisco
 configure terminal
 
+! First configure the BGP interface
+interface GigabitEthernet 0/1/0
+ description BGP Link to ISP_2
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+ exit
+
+! Configure OSPF
 router ospf 1
  router-id 30.30.30.30
  log-adjacency-changes
  passive-interface GigabitEthernet 0/0/1
+ passive-interface GigabitEthernet 0/1/0
  network 192.168.3.0 0.0.0.3 area 0
  network 192.168.30.0 0.0.0.63 area 0
  network 192.168.30.64 0.0.0.31 area 0
  network 192.168.30.96 0.0.0.31 area 0
+ ! Redistribute BGP routes into OSPF
+ redistribute bgp 65001 subnets metric 100 metric-type 1
  exit
 
 end
@@ -1092,10 +1305,156 @@ show ip ospf database
 
 ---
 
-## ACL Security Configuration
+## BGP Configuration
+
+### Purpose
+BGP (Border Gateway Protocol) connects ISP_2 to Router-C (Services & Library building), enabling external routing connectivity.
+
+### Configure BGP on ISP_2
+
+```cisco
+configure terminal
+
+router bgp 65000
+ bgp router-id 10.0.0.1
+ log-neighbor-changes
+ ! Configure neighbor relationship with Router-C
+ neighbor 10.0.0.2 remote-as 65001
+ ! Advertise EIGRP networks via BGP
+ network 11.0.0.0 mask 255.255.255.252
+ network 12.0.0.0 mask 255.255.255.252
+ network 13.0.0.0 mask 255.255.255.0
+ network 14.0.0.0 mask 255.255.255.0
+ exit
+
+end
+write memory
+```
+
+### Configure BGP on Router-C
+
+```cisco
+configure terminal
+
+router bgp 65001
+ bgp router-id 10.0.0.2
+ log-neighbor-changes
+ ! Configure neighbor relationship with ISP_2
+ neighbor 10.0.0.1 remote-as 65000
+ ! Advertise campus networks
+ network 192.168.0.0 mask 255.255.0.0
+ ! Redistribute OSPF routes into BGP
+ redistribute ospf 1 match internal external 1 external 2
+ exit
+
+end
+write memory
+```
+
+### Verify BGP
+
+```cisco
+! Check BGP neighbors
+show ip bgp summary
+
+! Expected: See BGP neighbor relationship with state "Established"
+
+! Check BGP routing table
+show ip bgp
+
+! Check received routes
+show ip bgp neighbors 10.0.0.1 routes
+
+! Verify BGP routes are in routing table
+show ip route bgp
+```
+
+---
+
+## EIGRP Configuration
+
+### Purpose
+EIGRP (Enhanced Interior Gateway Routing Protocol) connects ISP_2 to the two edge routers (Router-E1 and Router-E2).
+
+### Configure EIGRP on ISP_2
+
+```cisco
+configure terminal
+
+router eigrp 100
+ eigrp router-id 10.0.0.1
+ ! Advertise networks to edge routers
+ network 11.0.0.0 0.0.0.3
+ network 12.0.0.0 0.0.0.3
+ no auto-summary
+ exit
+
+end
+write memory
+```
+
+### Configure EIGRP on Router-E1
+
+```cisco
+configure terminal
+
+router eigrp 100
+ eigrp router-id 13.0.0.1
+ ! Advertise networks
+ network 11.0.0.0 0.0.0.3
+ network 13.0.0.0 0.0.0.255
+ no auto-summary
+ exit
+
+end
+write memory
+```
+
+### Configure EIGRP on Router-E2
+
+```cisco
+configure terminal
+
+router eigrp 100
+ eigrp router-id 14.0.0.1
+ ! Advertise networks
+ network 12.0.0.0 0.0.0.3
+ network 14.0.0.0 0.0.0.255
+ no auto-summary
+ exit
+
+end
+write memory
+```
+
+### Verify EIGRP
+
+```cisco
+! Check EIGRP neighbors
+show ip eigrp neighbors
+
+! Expected: See EIGRP neighbor relationships
+! State should show adjacency established
+
+! Check EIGRP topology
+show ip eigrp topology
+
+! Check EIGRP routing table
+show ip route eigrp
+
+! Expected: See routes learned via EIGRP (marked with 'D')
+```
+
+---
+
+## NEW ACL Security Configuration
+
+**⚠️ IMPORTANT - ALL PREVIOUS ACLs HAVE BEEN REMOVED**
+
+The network now implements a completely new security policy. The old ACLs (Guest-Restriction, Student-Restriction, Firewall ACLs) have been removed and replaced with the following:
 
 **⚠️ Important Note - Packet Tracer Compatibility**:
-Cisco Packet Tracer does NOT support the `log` keyword in ACL statements. If you see configurations with `log` in other guides, **remove it for Packet Tracer**. All ACL configurations below are Packet Tracer compatible.
+Cisco Packet Tracer does NOT support the `log` keyword in ACL statements. All ACL configurations below are Packet Tracer compatible.
 
 **Production IOS vs Packet Tracer**:
 - ❌ Production: `deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127 log` ← Has logging
@@ -1103,88 +1462,179 @@ Cisco Packet Tracer does NOT support the `log` keyword in ACL statements. If you
 
 ---
 
-### Router-D: Guest Wi-Fi Isolation ACL
+### NEW ACL Policy 1: Library Access Control (Router-C)
 
-**Purpose**: Complete isolation of guest network from ALL internal networks (CRITICAL security requirement).
+**Purpose**: Permit ONLY Library PCs (VLAN 30) to access the network, deny all other traffic from Library segment.
 
 ```cisco
 configure terminal
 
-! Extended ACL to restrict Guest Wi-Fi
-ip access-list extended GUEST-RESTRICTION
- ! Block access to Admin VLAN
- deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
- ! Block access to Server VLAN
- deny ip 192.168.99.0 0.0.0.255 192.168.30.64 0.0.0.31
- ! Block access to Security Monitoring
- deny ip 192.168.99.0 0.0.0.255 192.168.30.96 0.0.0.31
- ! Allow HTTP/HTTPS
- permit tcp 192.168.99.0 0.0.0.255 any eq 80
- permit tcp 192.168.99.0 0.0.0.255 any eq 443
- ! Allow DNS
- permit tcp 192.168.99.0 0.0.0.255 any eq 53
- permit udp 192.168.99.0 0.0.0.255 any eq 53
- ! Deny everything else
- deny ip 192.168.99.0 0.0.0.255 any
+! Extended ACL for Library access control
+ip access-list extended LIBRARY-ACCESS-CONTROL
+ ! Permit Library PCs to access all networks
+ permit ip 192.168.30.0 0.0.0.63 any
+ ! Deny all other traffic from Library segment (including servers, monitoring)
+ deny ip 192.168.30.64 0.0.0.31 any
+ deny ip 192.168.30.96 0.0.0.31 any
+ ! Permit return traffic
+ permit ip any 192.168.30.0 0.0.0.63
  exit
 
-! Apply ACL to Guest VLAN interface
-interface GigabitEthernet 0/0/1.99
- ip access-group GUEST-RESTRICTION in
+! Apply ACL to Library VLAN interface
+interface GigabitEthernet 0/0/1.30
+ ip access-group LIBRARY-ACCESS-CONTROL in
  exit
 
 end
 write memory
 ```
 
-### Router-B: Student Lab Restrictions ACL
+### NEW ACL Policy 2: Deny All Buildings Access to Admin Building
+
+**Objective**: Deny ALL buildings access to Admin Building resources (Building A - VLANs 10, 11, 12)
+
+#### Router-B: Deny Admin Access from Academic Building
 
 ```cisco
 configure terminal
 
-! Extended ACL to restrict student access
-ip access-list extended STUDENT-RESTRICTION
- ! Block access to Admin VLANs
+! Extended ACL denying access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny access to Admin Staff VLAN
  deny ip 192.168.20.0 0.0.0.127 192.168.10.0 0.0.0.127
+ ! Deny access to Admin Wi-Fi VLAN
  deny ip 192.168.20.0 0.0.0.127 192.168.10.128 0.0.0.63
+ ! Deny access to Admin Cameras VLAN
  deny ip 192.168.20.0 0.0.0.127 192.168.10.192 0.0.0.31
- ! Allow access to library
- permit ip 192.168.20.0 0.0.0.127 192.168.30.0 0.0.0.63
- ! Allow access to servers (for educational content)
- permit ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
- ! Allow internet access
- permit ip 192.168.20.0 0.0.0.127 any
+ ! Permit all other traffic
+ permit ip any any
+ exit
+
+! Apply ACL to all Building B VLANs
+interface GigabitEthernet 0/0/1.20
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+interface GigabitEthernet 0/0/1.21
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+interface GigabitEthernet 0/0/1.22
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+interface GigabitEthernet 0/0/1.23
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+end
+write memory
+```
+
+#### Router-C: Deny Admin Access from Services/Library Building
+
+```cisco
+configure terminal
+
+! Extended ACL denying Library/Services access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny Library users access to Admin VLANs
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.0 0.0.0.127
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.128 0.0.0.63
+ deny ip 192.168.30.0 0.0.0.63 192.168.10.192 0.0.0.31
+ ! Permit all other traffic
+ permit ip any any
+ exit
+
+! Apply to Library VLAN
+interface GigabitEthernet 0/0/1.30
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+end
+write memory
+```
+
+#### Router-D: Deny Admin Access from Sports/Events Building
+
+```cisco
+configure terminal
+
+! Extended ACL denying Sports/Events access to Admin Building
+ip access-list extended DENY-ADMIN-ACCESS
+ ! Deny Sports staff access to Admin VLANs
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.0 0.0.0.127
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.128 0.0.0.63
+ deny ip 192.168.40.0 0.0.0.31 192.168.10.192 0.0.0.31
+ ! Deny Guest Wi-Fi access to Admin VLANs
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.0 0.0.0.127
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.128 0.0.0.63
+ deny ip 192.168.99.0 0.0.0.255 192.168.10.192 0.0.0.31
+ ! Permit all other traffic
+ permit ip any any
+ exit
+
+! Apply to Sports Staff VLAN
+interface GigabitEthernet 0/0/1.40
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+! Apply to Guest Wi-Fi VLAN
+interface GigabitEthernet 0/0/1.99
+ ip access-group DENY-ADMIN-ACCESS in
+ exit
+
+end
+write memory
+```
+
+### NEW ACL Policy 3: Deny Student Building Access to Services Building Servers
+
+**Purpose**: Deny Student Building (Building B) direct access to Services Building servers (VLAN 31) to ensure data integrity.
+
+```cisco
+configure terminal
+
+! Extended ACL denying student access to servers
+ip access-list extended DENY-SERVER-ACCESS
+ ! Deny Student Lab access to Server VLAN
+ deny ip 192.168.20.0 0.0.0.127 192.168.30.64 0.0.0.31
+ ! Deny Teacher access to Server VLAN
+ deny ip 192.168.20.128 0.0.0.63 192.168.30.64 0.0.0.31
+ ! Permit access to Library (public resources)
+ permit ip any 192.168.30.0 0.0.0.63
+ ! Permit all other traffic
+ permit ip any any
  exit
 
 ! Apply ACL to Student VLAN interface
 interface GigabitEthernet 0/0/1.20
- ip access-group STUDENT-RESTRICTION in
+ ip access-group DENY-SERVER-ACCESS in
+ exit
+
+! Apply ACL to Teacher VLAN interface
+interface GigabitEthernet 0/0/1.21
+ ip access-group DENY-SERVER-ACCESS in
  exit
 
 end
 write memory
 ```
 
-### All Routers: SSH Access Control ACL
+### Admin Building (Router-A): No ACL Restrictions
 
-```cisco
-configure terminal
+**Note**: Admin Building has full access to all resources. NO restrictive ACLs are applied to Router-A.
 
-! Standard ACL for management access (Packet Tracer compatible - no log keyword)
-access-list 1 remark MANAGEMENT ACCESS
-access-list 1 permit 192.168.10.0 0.0.0.127
-access-list 1 permit 192.168.30.96 0.0.0.31
-access-list 1 deny any
+### ACL Summary
 
-! Apply to VTY lines
-line vty 0 4
- access-class 1 in
- transport input ssh
- exit
-
-end
-write memory
-```
+| Building | ACL Applied | Purpose |
+|----------|-------------|---------|
+| Admin (A) | None | Full access to all resources |
+| Academic (B) | DENY-ADMIN-ACCESS | Block access to Admin Building |
+| Academic (B) | DENY-SERVER-ACCESS | Block access to Services servers |
+| Services (C) | LIBRARY-ACCESS-CONTROL | Only Library PCs can access network |
+| Services (C) | DENY-ADMIN-ACCESS | Block access to Admin Building |
+| Sports (D) | DENY-ADMIN-ACCESS | Block access to Admin Building |
 
 ---
 
@@ -1344,6 +1794,44 @@ end
 write memory
 ```
 
+### Router-E1: DHCP Pool (Edge Network 1)
+
+```cisco
+configure terminal
+
+ip dhcp excluded-address 13.0.0.1 13.0.0.10
+
+! Edge Network 1
+ip dhcp pool EDGE-NETWORK-1
+ network 13.0.0.0 255.255.255.0
+ default-router 13.0.0.1
+ dns-server 8.8.8.8 8.8.4.4
+ domain-name edge1.futurevision.edu
+ exit
+
+end
+write memory
+```
+
+### Router-E2: DHCP Pool (Edge Network 2)
+
+```cisco
+configure terminal
+
+ip dhcp excluded-address 14.0.0.1 14.0.0.10
+
+! Edge Network 2
+ip dhcp pool EDGE-NETWORK-2
+ network 14.0.0.0 255.255.255.0
+ default-router 14.0.0.1
+ dns-server 8.8.8.8 8.8.4.4
+ domain-name edge2.futurevision.edu
+ exit
+
+end
+write memory
+```
+
 ---
 
 ## End Device Configuration
@@ -1361,6 +1849,16 @@ For each end-user PC/Laptop:
 **Example for Admin-PC-1 (Building A, VLAN 10):**
 - Expected IP: 192.168.10.11 to 192.168.10.126
 - Gateway: 192.168.10.1
+- DNS: 8.8.8.8
+
+**Example for Edge-PC-1 (Edge Network 1):**
+- Expected IP: 13.0.0.11 to 13.0.0.254
+- Gateway: 13.0.0.1
+- DNS: 8.8.8.8
+
+**Example for Edge-PC-2 (Edge Network 2):**
+- Expected IP: 14.0.0.11 to 14.0.0.254
+- Gateway: 14.0.0.1
 - DNS: 8.8.8.8
 
 ### Configure Servers with Static IPs
